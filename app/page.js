@@ -2,6 +2,77 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+// ── MOTION LAYER ──────────────────────────────────────────────────────────────
+
+function MotionLayer() {
+  const cursorRef = useRef(null);
+  const pos = useRef({ x: -999, y: -999 });
+  const raf = useRef(null);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      pos.current = { x: e.clientX, y: e.clientY };
+    };
+
+    const tick = () => {
+      if (cursorRef.current) {
+        cursorRef.current.style.left = pos.current.x + 'px';
+        cursorRef.current.style.top  = pos.current.y + 'px';
+      }
+      raf.current = requestAnimationFrame(tick);
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
+    raf.current = requestAnimationFrame(tick);
+
+    // ── navbar scroll class ──
+    const navbar = document.querySelector('.navbar');
+    const onScroll = () => {
+      if (!navbar) return;
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    // ── parallax hero blobs on scroll ──
+    const blobs = document.querySelectorAll('.hero-blob');
+    const onParallax = () => {
+      const y = window.scrollY;
+      blobs.forEach((b, i) => {
+        const speed = 0.06 + i * 0.03;
+        b.style.transform = b.style.transform.replace(/translateY\([^)]+\)/, '')
+          + ` translateY(${y * speed}px)`;
+      });
+    };
+    window.addEventListener('scroll', onParallax, { passive: true });
+
+    // ── section ambient glows ──
+    const glows = document.querySelectorAll('.section-glow');
+    const glowObserver = new IntersectionObserver(
+      (entries) => entries.forEach((e) => {
+        if (e.isIntersecting) e.target.classList.add('visible');
+        else e.target.classList.remove('visible');
+      }),
+      { threshold: 0.1 }
+    );
+    glows.forEach((g) => glowObserver.observe(g));
+
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('scroll', onParallax);
+      cancelAnimationFrame(raf.current);
+      glowObserver.disconnect();
+    };
+  }, []);
+
+  return (
+    <>
+      <div className="dot-grid" aria-hidden="true" />
+      <div className="cursor-glow" ref={cursorRef} aria-hidden="true" />
+    </>
+  );
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
 const EXPERIENCE = [
@@ -84,8 +155,8 @@ const PROJECTS = [
 
 const EXPERTISE = [
   {
-    color: 'orange',
-    icon: '◈',
+    accent: 'p-cyan',
+    icon: '⬡',
     name: 'Frontend Engineering',
     desc: 'Design systems, component architecture, performance optimization, WCAG accessibility.',
     chips: ['React', 'Angular', 'Next.js', 'TypeScript', 'RxJS', 'Storybook'],
@@ -97,8 +168,8 @@ const EXPERTISE = [
     ],
   },
   {
-    color: 'purple',
-    icon: '◉',
+    accent: 'p-pink',
+    icon: '⬢',
     name: 'Testing & Quality',
     desc: 'Full-stack coverage, accessibility auditing, E2E automation, CI-enforced quality gates.',
     chips: ['Jest', 'React Testing Library', 'Selenium', 'NUnit', 'xUnit', 'WCAG'],
@@ -110,8 +181,8 @@ const EXPERTISE = [
     ],
   },
   {
-    color: 'amber',
-    icon: '◎',
+    accent: 'p-amber',
+    icon: '◈',
     name: 'Backend & APIs',
     desc: 'REST APIs, microservices, Spring Boot, Node.js, secure auth flows, SQL databases.',
     chips: ['Spring Boot', 'Node.js', 'C#/.NET', 'PostgreSQL', 'GraphQL', 'JWT'],
@@ -123,8 +194,8 @@ const EXPERTISE = [
     ],
   },
   {
-    color: 'blue',
-    icon: '◐',
+    accent: 'p-green',
+    icon: '◎',
     name: 'Cloud & DevOps',
     desc: 'AWS ECS Fargate, Docker, Kubernetes, CI/CD pipelines, observability stacks.',
     chips: ['AWS ECS', 'Docker', 'Kubernetes', 'GitHub Actions', 'Azure DevOps', 'Prometheus'],
@@ -136,8 +207,8 @@ const EXPERTISE = [
     ],
   },
   {
-    color: 'red',
-    icon: '◑',
+    accent: 'p-red',
+    icon: '◐',
     name: 'Systems & Architecture',
     desc: 'Microservice design, RAG pipelines, load testing at scale, data isolation.',
     chips: ['Microservices', 'RAG / LLM', 'k6 Load Testing', 'ChromaDB', 'Grafana'],
@@ -169,23 +240,19 @@ const EDUCATION = [
 // ── BOOT LINES ────────────────────────────────────────────────────────────────
 
 const BOOT_LINES = [
-  { text: 'BIOS v4.2.0 — GAURI_MARKANDEY_SYS', cls: 'bright' },
-  { text: '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', cls: '' },
-  { text: 'Initializing hardware...', cls: '' },
-  { text: '  [OK]  CPU: Frontend Engineering Core × 3yrs', cls: 'green' },
-  { text: '  [OK]  RAM: React, Angular, TypeScript, Next.js', cls: 'green' },
-  { text: '  [OK]  NET: REST APIs, GraphQL, Spring Boot', cls: 'green' },
-  { text: '  [OK]  STO: AWS ECS, Docker, Kubernetes', cls: 'green' },
+  { text: 'GAURI_MARKANDEY_SYS  v4.2.0', cls: 'bright' },
+  { text: '─────────────────────────────', cls: '' },
+  { text: 'Booting...', cls: '' },
+  { text: '[OK] React · Angular · TypeScript', cls: 'green' },
+  { text: '[OK] AWS ECS · Docker · Kubernetes', cls: 'green' },
+  { text: '[OK] Spring Boot · Node.js · .NET', cls: 'green' },
   { text: '', cls: '' },
-  { text: 'Loading modules...', cls: '' },
-  { text: '  [MOD] design-system.ko — loaded', cls: 'purple' },
-  { text: '  [MOD] wcag-accessibility.ko — loaded', cls: 'purple' },
-  { text: '  [MOD] microservices-arch.ko — loaded', cls: 'purple' },
-  { text: '  [MOD] rag-pipeline.ko — loaded', cls: 'purple' },
+  { text: '[MOD] design-system.ko', cls: 'purple' },
+  { text: '[MOD] wcag-a11y.ko', cls: 'purple' },
+  { text: '[MOD] rag-pipeline.ko', cls: 'purple' },
   { text: '', cls: '' },
-  { text: '  [WARN] new_grad=true, ship_anyway=true', cls: 'red' },
+  { text: '[WARN] new_grad=true ship_anyway=true', cls: 'red' },
   { text: '', cls: '' },
-  { text: 'System ready.', cls: 'green' },
   { text: '$ exec portfolio --mode=impress', cls: 'bright' },
 ];
 
@@ -226,7 +293,6 @@ const TERMINAL_COMMANDS = {
     { cls: 't-warn', text: '  Node.js            ████████████ 80%' },
     { cls: 't-warn', text: '  C# / .NET          ████████     78%' },
     { cls: 't-warn', text: '  PostgreSQL         ████████     78%' },
-    { cls: 't-out',  text: '  JWT, RBAC, input validation, secure auth' },
   ],
   cloud: [
     { cls: 't-ok',   text: 'Cloud & DevOps:' },
@@ -234,7 +300,6 @@ const TERMINAL_COMMANDS = {
     { cls: 't-info', text: '  Docker + Compose   ██████████   84%' },
     { cls: 't-info', text: '  CI/CD Pipelines    ███████████  88%' },
     { cls: 't-info', text: '  Kubernetes         █████████    72%' },
-    { cls: 't-info', text: '  Prometheus/Grafana █████████    78%' },
   ],
   projects: [
     { cls: 't-ok',   text: 'Projects:' },
@@ -264,7 +329,7 @@ function BootScreen({ onComplete }) {
       if (i >= BOOT_LINES.length) {
         clearInterval(interval);
         setTimeout(() => setFading(true), 400);
-        setTimeout(() => { setDone(true); onComplete(); }, 1000);
+        setTimeout(() => { setDone(true); onComplete(); }, 1050);
         return;
       }
       setLines((prev) => [...prev, BOOT_LINES[i]]);
@@ -277,7 +342,7 @@ function BootScreen({ onComplete }) {
 
   return (
     <div className={`boot-screen${fading ? ' fade-out' : ''}`}>
-      <div style={{ width: '100%', maxWidth: 520 }}>
+      <div className="boot-inner">
         {lines.map((l, idx) => (
           <div key={idx} className={`boot-line ${l?.cls ?? ''}`}>{l?.text ?? ''}</div>
         ))}
@@ -319,7 +384,17 @@ function ThemeToggle() {
 function Navbar() {
   return (
     <nav className="navbar">
-      <div className="nav-logo">gauri@portfolio:~$</div>
+      <div className="nav-logo" style={{
+      fontFamily: 'var(--display)',
+      fontSize: 18,
+      fontWeight: 800,
+      background: 'linear-gradient(135deg, #7C5CFF, #22D3EE)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+      letterSpacing: '-0.02em',
+      filter: 'drop-shadow(0 0 8px rgba(124,92,255,0.4))',
+    }}>GM</div>
       <ul className="nav-links">
         <li><a href="#experience">Experience</a></li>
         <li><a href="#projects">Projects</a></li>
@@ -329,7 +404,7 @@ function Navbar() {
       <div className="nav-right">
         <div className="nav-status">
           <div className="status-dot" />
-          Available May 2026
+          Open to work
         </div>
         <ThemeToggle />
       </div>
@@ -342,17 +417,24 @@ function Navbar() {
 function Hero() {
   return (
     <section className="hero">
+      <div className="hero-blob hero-blob-1" />
+      <div className="hero-blob hero-blob-2" />
+      <div className="hero-blob hero-blob-3" />
+
       <div className="hero-inner">
-        <div className="hero-eyebrow">Software Engineer · New Grad May 2026 · US Authorized</div>
+        <div className="hero-eyebrow">
+          <span className="hero-eyebrow-dot" />
+          Software Engineer · Available May 2026
+        </div>
 
         <h1 className="hero-name">
           Gauri
-          <span>Markandey.</span>
+          <span className="hero-name-grad">Markandey.</span>
         </h1>
 
         <p className="hero-tagline">
-          I build <strong>frontend systems</strong>, not just interfaces —
-          from design systems and accessible UIs to cloud-native microservices at production scale.
+          I build <strong>frontend systems</strong> that scale —
+          from accessible design systems to cloud-native microservices at production depth.
         </p>
 
         <div className="hero-cta">
@@ -367,7 +449,7 @@ function Hero() {
             <span className="hero-meta-value">3+ Years Production</span>
           </div>
           <div className="hero-meta-item">
-            <span className="hero-meta-label">Primary Stack</span>
+            <span className="hero-meta-label">Stack</span>
             <span className="hero-meta-value">React · Angular · TypeScript</span>
           </div>
           <div className="hero-meta-item">
@@ -375,8 +457,8 @@ function Hero() {
             <span className="hero-meta-value">AWS · Docker · Kubernetes</span>
           </div>
           <div className="hero-meta-item">
-            <span className="hero-meta-label">Location</span>
-            <span className="hero-meta-value">Bloomington, IN (Open to Relocation)</span>
+            <span className="hero-meta-label">Status</span>
+            <span className="hero-meta-value" style={{ color: 'var(--green)', fontWeight: 700 }}>Open to Work</span>
           </div>
         </div>
       </div>
@@ -384,15 +466,15 @@ function Hero() {
   );
 }
 
-// ── INTERACTIVE TERMINAL ──────────────────────────────────────────────────────
+// ── TERMINAL ─────────────────────────────────────────────────────────────────
 
 const INITIAL_OUTPUT = [
-  { cls: 't-ok',  text: 'gauri-terminal v1.0 — type "help" for commands' },
+  { cls: 't-ok',  text: 'gauri-terminal — type "help" for commands' },
   { cls: 't-out', text: '' },
 ];
 
 function TerminalSection() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [output, setOutput] = useState(INITIAL_OUTPUT);
   const [input, setInput] = useState('');
   const bodyRef = useRef(null);
@@ -425,9 +507,7 @@ function TerminalSection() {
   return (
     <div className="terminal-section">
       <div className="terminal-section-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text3)' }}>// interactive terminal</span>
-        </div>
+        <span className="terminal-label">// interactive terminal</span>
         <button
           className="terminal-toggle-btn"
           onClick={() => {
@@ -435,16 +515,15 @@ function TerminalSection() {
             if (!open) setTimeout(() => inputRef.current?.focus(), 400);
           }}
         >
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{open ? '▲ collapse' : '▼ expand'}</span>
+          {open ? '▲ collapse' : '▼ expand'}
         </button>
       </div>
 
       <div
         className="terminal-wrap"
         style={{
-          maxHeight: open ? 420 : 0,
+          maxHeight: open ? 400 : 0,
           opacity: open ? 1 : 0,
-          overflow: 'hidden',
           borderWidth: open ? 1 : 0,
         }}
       >
@@ -550,10 +629,12 @@ function ProjectCard({ proj }) {
           ))}
         </div>
       </div>
+
       <div className="project-expand-btn" onClick={() => setOpen((o) => !o)}>
         <span>{open ? 'Collapse' : 'See details'}</span>
         <span style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
       </div>
+
       <div className="project-body-wrap">
         <div className="project-body-inner">
           <div className="project-body">
@@ -565,7 +646,7 @@ function ProjectCard({ proj }) {
             <p>{proj.impact}</p>
             <div className="project-section-title" style={{ marginTop: 16 }}>Stack</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-              {proj.stack.map((t) => <span key={t} className="tag purple">{t}</span>)}
+              {proj.stack.map((t) => <span key={t} className="tag cyan">{t}</span>)}
             </div>
             <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{proj.period}</div>
           </div>
@@ -585,7 +666,7 @@ function ExpertiseCard({ card }) {
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setAnimated(true); },
-      { threshold: 0.25 }
+      { threshold: 0.2 }
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
@@ -597,7 +678,7 @@ function ExpertiseCard({ card }) {
   };
 
   return (
-    <div ref={ref} className={`expertise-card ${card.color}`} onClick={handleClick}>
+    <div ref={ref} className={`expertise-card ${card.accent}`} onClick={handleClick}>
       {swept && <div className="sweep" />}
       <span className="expertise-icon">{card.icon}</span>
       <div className="expertise-name">{card.name}</div>
@@ -651,7 +732,7 @@ function useFadeUp() {
     const els = document.querySelectorAll('.fade-up');
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-      { threshold: 0.08 }
+      { threshold: 0.07 }
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
@@ -668,23 +749,23 @@ export default function Page() {
     <>
       <BootScreen onComplete={() => setBooted(true)} />
 
-      <div style={{ opacity: booted ? 1 : 0, transition: 'opacity 0.8s ease' }}>
+      <div style={{ opacity: booted ? 1 : 0, transition: 'opacity 0.9s ease' }}>
+        <MotionLayer />
         <Navbar />
         <main>
           <Hero />
-
-          {/* TERMINAL — collapsible, below hero */}
           <TerminalSection />
 
           <hr className="section-divider" />
 
           {/* EXPERIENCE */}
-          <section id="experience" className="section">
+          <section id="experience" className="section" style={{ position: 'relative' }}>
+            <div className="section-glow section-glow-purple" />
             <div className="section-label fade-up">01</div>
             <h2 className="section-title fade-up">Work Experience</h2>
             <div className="timeline" style={{ paddingLeft: 4 }}>
-              {EXPERIENCE.map((exp) => (
-                <div key={exp.company} className="fade-up">
+              {EXPERIENCE.map((exp, i) => (
+                <div key={exp.company} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
                   <ExperienceCard exp={exp} />
                 </div>
               ))}
@@ -694,12 +775,13 @@ export default function Page() {
           <hr className="section-divider" />
 
           {/* PROJECTS */}
-          <section id="projects" className="section">
+          <section id="projects" className="section" style={{ position: 'relative' }}>
+            <div className="section-glow section-glow-cyan" />
             <div className="section-label fade-up">02</div>
             <h2 className="section-title fade-up">Projects</h2>
             <div className="projects-grid">
-              {PROJECTS.map((p) => (
-                <div key={p.num} className="fade-up">
+              {PROJECTS.map((p, i) => (
+                <div key={p.num} className="fade-up" style={{ transitionDelay: `${i * 0.09}s` }}>
                   <ProjectCard proj={p} />
                 </div>
               ))}
@@ -709,12 +791,13 @@ export default function Page() {
           <hr className="section-divider" />
 
           {/* EXPERTISE */}
-          <section id="expertise" className="section">
+          <section id="expertise" className="section" style={{ position: 'relative' }}>
+            <div className="section-glow section-glow-purple" />
             <div className="section-label fade-up">03</div>
             <h2 className="section-title fade-up">Technical Expertise</h2>
             <div className="expertise-grid">
-              {EXPERTISE.map((card) => (
-                <div key={card.name} className="fade-up">
+              {EXPERTISE.map((card, i) => (
+                <div key={card.name} className="fade-up" style={{ transitionDelay: `${i * 0.07}s` }}>
                   <ExpertiseCard card={card} />
                 </div>
               ))}
@@ -728,8 +811,8 @@ export default function Page() {
             <div className="section-label fade-up">04</div>
             <h2 className="section-title fade-up">Education</h2>
             <div className="edu-grid">
-              {EDUCATION.map((e) => (
-                <div key={e.school} className="fade-up">
+              {EDUCATION.map((e, i) => (
+                <div key={e.school} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
                   <EducationCard edu={e} />
                 </div>
               ))}
@@ -739,25 +822,27 @@ export default function Page() {
           <hr className="section-divider" />
 
           {/* CONTACT */}
-          <section id="contact" className="contact-section">
-            <h2 className="contact-title fade-up">
-              Let's build<br /><span>something great.</span>
-            </h2>
-            <p className="contact-sub fade-up">
-              Open to frontend & fullstack roles. Available May 2026, US authorized.
-            </p>
-            <div className="contact-links fade-up">
-              <a href="mailto:gauri2029@gmail.com" className="contact-link">✉ gauri2029@gmail.com</a>
-              <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="contact-link">↗ LinkedIn</a>
-              <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="contact-link">⌥ GitHub</a>
+          <section id="contact">
+            <div className="contact-section">
+              <h2 className="contact-title fade-up">
+                Let's build<br /><span>something great.</span>
+              </h2>
+              <p className="contact-sub fade-up">
+                Whether it's a frontend system, a design challenge, or something that needs to scale - I'd love to hear about it.
+              </p>
+              <div className="contact-links fade-up">
+                <a href="mailto:gauri2029@gmail.com" className="contact-link">✉ gauri2029@gmail.com</a>
+                <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="contact-link">↗ LinkedIn</a>
+                <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="contact-link">⌥ GitHub</a>
+              </div>
             </div>
           </section>
         </main>
 
         <footer>
-          <span>Gauri Markandey © 2026</span>
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
-            built with next.js
+          <span style={{ fontWeight: 600 }}>Gauri Markandey</span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text3)' }}>
+            open to work · may 2026
           </span>
         </footer>
       </div>
