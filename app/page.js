@@ -10,10 +10,7 @@ function MotionLayer() {
   const raf = useRef(null);
 
   useEffect(() => {
-    const onMove = (e) => {
-      pos.current = { x: e.clientX, y: e.clientY };
-    };
-
+    const onMove = (e) => { pos.current = { x: e.clientX, y: e.clientY }; };
     const tick = () => {
       if (cursorRef.current) {
         cursorRef.current.style.left = pos.current.x + 'px';
@@ -21,11 +18,9 @@ function MotionLayer() {
       }
       raf.current = requestAnimationFrame(tick);
     };
-
     window.addEventListener('mousemove', onMove, { passive: true });
     raf.current = requestAnimationFrame(tick);
 
-    // ── navbar scroll class ──
     const navbar = document.querySelector('.navbar');
     const onScroll = () => {
       if (!navbar) return;
@@ -33,7 +28,6 @@ function MotionLayer() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // ── parallax hero blobs on scroll ──
     const blobs = document.querySelectorAll('.hero-blob');
     const onParallax = () => {
       const y = window.scrollY;
@@ -45,7 +39,6 @@ function MotionLayer() {
     };
     window.addEventListener('scroll', onParallax, { passive: true });
 
-    // ── section ambient glows ──
     const glows = document.querySelectorAll('.section-glow');
     const glowObserver = new IntersectionObserver(
       (entries) => entries.forEach((e) => {
@@ -385,16 +378,16 @@ function Navbar() {
   return (
     <nav className="navbar">
       <div className="nav-logo" style={{
-      fontFamily: 'var(--display)',
-      fontSize: 18,
-      fontWeight: 800,
-      background: 'linear-gradient(135deg, #7C5CFF, #22D3EE)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      backgroundClip: 'text',
-      letterSpacing: '-0.02em',
-      filter: 'drop-shadow(0 0 8px rgba(124,92,255,0.4))',
-    }}>GM</div>
+        fontFamily: 'var(--display)',
+        fontSize: 18,
+        fontWeight: 800,
+        background: 'linear-gradient(135deg, #7C5CFF, #22D3EE)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        letterSpacing: '-0.02em',
+        filter: 'drop-shadow(0 0 8px rgba(124,92,255,0.4))',
+      }}>GM</div>
       <ul className="nav-links">
         <li><a href="#experience">Experience</a></li>
         <li><a href="#projects">Projects</a></li>
@@ -422,44 +415,64 @@ function Hero() {
       <div className="hero-blob hero-blob-3" />
 
       <div className="hero-inner">
-        <div className="hero-eyebrow">
-          <span className="hero-eyebrow-dot" />
-          Software Engineer · Available May 2026
-        </div>
+        <div className="hero-layout">
 
-        <h1 className="hero-name">
-          Gauri
-          <span className="hero-name-grad">Markandey.</span>
-        </h1>
+          {/* LEFT — text content */}
+          <div className="hero-text">
+          <div className="hero-eyebrow">
+            <span className="hero-eyebrow-dot" />
+            new_grad=true · available=may_2026
+          </div>
 
-        <p className="hero-tagline">
-          I build <strong>frontend systems</strong> that scale —
-          from accessible design systems to cloud-native microservices at production depth.
-        </p>
+            <h1 className="hero-name">
+              Gauri
+              <span className="hero-name-grad">Markandey.</span>
+            </h1>
 
-        <div className="hero-cta">
-          <a href="#projects" className="btn btn-primary">View Projects →</a>
-          <a href="#contact" className="btn btn-ghost">Get in Touch</a>
-          <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">LinkedIn ↗</a>
-        </div>
+            <p className="hero-tagline">
+              Software engineer with <strong>2+ years in production</strong> - 
+              building pixel-perfect UIs, design systems, and cloud-native backends 
+              that handle real load.
+            </p>
 
-        <div className="hero-meta">
-          <div className="hero-meta-item">
-            <span className="hero-meta-label">Experience</span>
-            <span className="hero-meta-value">3+ Years Production</span>
+            <div className="hero-cta">
+              <a href="https://drive.google.com/file/d/104RG_mFMm7FrlhXzcqRHq6h1mQntyBI4/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn btn-primary">View Resume →
+              </a>
+              <a href="#contact" className="btn btn-ghost">Get in Touch</a>
+              <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">LinkedIn ↗</a>
+            </div>
+
+            <div className="hero-meta">
+              <div className="hero-meta-item">
+                <span className="hero-meta-label">Currently</span>
+                <span className="hero-meta-value">M.S. CS · Indiana University</span>
+              </div>
+              <div className="hero-meta-item">
+                <span className="hero-meta-label">Looking for</span>
+                <span className="hero-meta-value">SWE roles · New Grad 2026</span>
+              </div>
+            </div>
           </div>
-          <div className="hero-meta-item">
-            <span className="hero-meta-label">Stack</span>
-            <span className="hero-meta-value">React · Angular · TypeScript</span>
+
+          {/* RIGHT — avatar */}
+          <div className="hero-avatar-wrap">
+            {/* outer glow */}
+            <div className="hero-avatar-glow" />
+            {/* gradient ring */}
+            <div className="hero-avatar-ring" />
+            {/* floating skill badges */}
+            <div className="hero-badge hero-badge-tl">React</div>
+            <div className="hero-badge hero-badge-tr">AWS</div>
+            <div className="hero-badge hero-badge-bl">TypeScript</div>
+            <div className="hero-badge hero-badge-br">Docker</div>
+            {/* image */}
+            <img
+              src="/avatar.png"
+              alt="Gauri Markandey - software engineer"
+              className="hero-avatar-img"
+            />
           </div>
-          <div className="hero-meta-item">
-            <span className="hero-meta-label">Cloud</span>
-            <span className="hero-meta-value">AWS · Docker · Kubernetes</span>
-          </div>
-          <div className="hero-meta-item">
-            <span className="hero-meta-label">Status</span>
-            <span className="hero-meta-value" style={{ color: 'var(--green)', fontWeight: 700 }}>Open to Work</span>
-          </div>
+
         </div>
       </div>
     </section>
