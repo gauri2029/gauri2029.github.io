@@ -2,6 +2,53 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+
+
+// ── WORLD MODE HOOK ───────────────────────────────────────────────────────────
+
+function useWorldMode() {
+  const [mode, setMode] = useState('chaos');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('site-mode');
+    if (saved) setMode(saved);
+  }, []);
+
+  const updateMode = useCallback((m) => {
+    setMode(m);
+    localStorage.setItem('site-mode', m);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-mode', mode);
+  }, [mode]);
+
+  return { mode, updateMode };
+}
+
+// ── MODE SWITCHER UI ──────────────────────────────────────────────────────────
+
+function ModeSwitcher({ mode, updateMode }) {
+  const modes = [
+    { id: 'professional', label: '◼ Pro', title: 'Professional' },
+    { id: 'chaos',        label: '⚡ Chaos', title: 'Chaos' },
+  ];
+  return (
+    <div className="mode-switcher" aria-label="Site mode">
+      {modes.map((m) => (
+        <button
+          key={m.id}
+          className={`mode-btn${mode === m.id ? ' active' : ''}`}
+          onClick={() => updateMode(m.id)}
+          title={m.title}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── MOTION LAYER ──────────────────────────────────────────────────────────────
 
 function MotionLayer() {
@@ -70,30 +117,30 @@ function MotionLayer() {
 
 const EXPERIENCE = [
   {
-    role: 'Software Developer 2',
+    role: 'Software Developer',
     company: 'Cyberinfrastructure for Network Science Center (CNS)',
     location: 'Bloomington, IN',
-    period: 'Jan 2025 – Jan 2026',
+    period: 'Jan 2025 - Jan 2026',
     stack: ['Angular', 'TypeScript', 'RxJS', 'AWS S3', 'Jest', 'GitHub Actions'],
     bullets: [
-      '<strong>Architected & refactored</strong> Angular + TypeScript frontend integrating AWS S3 and shared design system; reduced dev overhead ~20%.',
-      '<strong>Optimized RxJS data flows</strong> across critical user journeys, cutting redundant requests ~20% and improving responsiveness.',
-      '<strong>Owned production stability</strong> for NIH-funded Human Reference Atlas — zero critical user-facing disruptions across the release cycle.',
-      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions, reducing build and release friction ~25%.',
+      '<strong>Architected & refactored</strong> Angular + TypeScript frontend integrating AWS S3 and a shared design system with reusable component libraries - ensuring WCAG accessibility and scalability, reducing dev overhead ~20%.',
+      '<strong>Optimized RxJS data flows</strong> across critical user journeys, cutting redundant requests ~20% and improving performance and responsiveness.',
+      '<strong>Owned production stability</strong> for the NIH-funded Human Reference Atlas - monitoring, debugging, and resolving live issues with zero critical user-facing disruptions.',
+      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted dev tools to accelerate iteration, reducing build and release friction ~25%.',
     ],
   },
   {
     role: 'Software Engineer',
     company: 'Tietoevry India Pvt. Ltd.',
     location: 'Pune, India',
-    period: 'Jul 2022 – Jun 2024',
+    period: 'Jul 2022 - Jun 2024',
     stack: ['React', 'C#', '.NET', 'Node.js', 'Docker', 'Azure', 'Storybook', 'Selenium'],
     bullets: [
-      '<strong>Led Angular → React migration</strong> across a large-scale healthcare frontend — reduced build complexity across 6–7 microservices on Azure.',
-      '<strong>Built reusable component libraries</strong> with React + Storybook + Figma, cutting frontend effort ~35%.',
-      '<strong>Owned full-stack testing</strong> — Jest, RTL, Selenium, NUnit, xUnit — maintaining 80%+ code coverage in a regulated environment.',
-      '<strong>Built Node.js/.NET REST APIs</strong> powering 6–7 feature-based microservices with secure auth and access controls.',
-      '<strong>CI/CD with Azure DevOps + Docker</strong> reduced production incidents ~35% and improved release consistency.',
+      '<strong>Contributed to Angular → React migration</strong> across a large-scale healthcare frontend - reducing build complexity and improving maintainability across microservices deployed on Azure.',
+      '<strong>Developed reusable component libraries</strong> with React, Storybook, and Figma - cutting frontend development effort ~35%.',
+      '<strong>Wrote and maintained full-stack tests</strong> across unit, integration, and E2E layers using Jest, RTL, Selenium, NUnit, and xUnit - maintaining 80%+ code coverage in a regulated environment.',
+      '<strong>Built Node.js and C#/.NET REST APIs</strong> with SQL Server powering feature-based microservices, enforcing input validation, secure auth flows, and access controls in a regulated healthcare environment.',
+      '<strong>Supported CI/CD pipelines</strong> using Azure DevOps and Docker - reducing production incidents ~35% and improving release consistency.',
     ],
   },
 ];
@@ -102,47 +149,50 @@ const PROJECTS = [
   {
     num: '01',
     name: 'DocuQuery',
-    tagline: 'RAG-powered REST API with semantic search',
-    desc: 'An embed → retrieve → generate pipeline with source-cited answers and sub-second latency.',
+    link: 'https://github.com/gauri2029/docuquery',
+    tagline: 'Internal document assistant for developers',
+    desc: 'Built to solve a real need - a secure, self-hosted assistant that lets developers query internal docs in plain English and get cited answers instantly.',
     metrics: [
       { val: 'P95', label: 'sub-second latency' },
       { val: '5', label: 'orchestrated services' },
     ],
     stack: ['Spring Boot', 'OpenAI', 'ChromaDB', 'PostgreSQL', 'Docker', 'Prometheus', 'Grafana'],
-    problem: 'RAG pipelines often lack production-grade observability or degrade under load.',
-    approach: 'Semantic search pipeline over ChromaDB with prompt-constrained LLM responses. 5 services containerized via Docker Compose with full metric instrumentation.',
-    impact: 'P95 latency under 1s. Micrometer metrics covering P50/P95/P99 latency, error rates, throughput, and health checks.',
-    period: 'Dec 2025 – Jan 2026',
+    problem: 'Developers waste time digging through internal docs. Existing AI tools send data to the cloud - not viable for private or sensitive documentation.',
+    approach: 'Self-hosted RAG pipeline - documents are chunked, embedded via OpenAI, and stored in ChromaDB. Queries run semantic search over stored chunks and pass context to GPT-4o-mini with strict prompt constraints to prevent hallucination.',
+    impact: 'P95 query latency under 1s. Full observability with Micrometer metrics - P50/P95/P99 latency, error rates, and throughput tracked via Prometheus and Grafana.',
+    period: 'Dec 2025 - Jan 2026',
   },
   {
     num: '02',
     name: 'Degree Flowchart',
-    tagline: 'Cloud-native microservices on AWS ECS',
-    desc: 'Scalable degree planning system with 7 independent Spring Boot services, load-tested at 1,000+ concurrent users.',
+    link: 'https://github.com/degree-flowchart',
+    tagline: 'Microservices architecture with Angular frontend',
+    desc: 'Not your average degree planner - a distributed system with a dynamic flowchart UI, OAuth login, schedule exports, and a microservices backend built to scale.',
     metrics: [
-      { val: '245ms', label: 'median response time' },
-      { val: '100k+', label: 'requests sustained' },
+      { val: '245ms', label: 'median response (k6)' },
+      { val: '100k+', label: 'requests load tested' },
     ],
-    stack: ['Spring Boot', 'AWS ECS Fargate', 'Kubernetes', 'PostgreSQL', 'Docker', 'Prometheus', 'k6'],
-    problem: 'Degree planning systems often live as monoliths — hard to scale, harder to maintain.',
-    approach: '7 Spring Boot microservices with independent PostgreSQL databases. Deployed to AWS ECS Fargate with k6 load testing at scale.',
-    impact: '1,000 concurrent users, 100k+ requests at 245ms median and 95%+ success rate under load.',
-    period: 'Sept 2025 – Dec 2025',
+    stack: ['Spring Boot', 'Angular', 'PostgreSQL', 'Docker', 'Terraform', 'k6', 'Prometheus'],
+    problem: 'Students had no structured system to visualize and plan their degree path - relying on spreadsheets, manual tracking, and advisor emails to figure out what to take next.',
+    approach: 'Distributed system with independent Spring Boot microservices and PostgreSQL databases. Angular frontend with a dynamic flowchart - students can select, move, and schedule courses, export schedules, and log in securely via OAuth. Infrastructure provisioned with Terraform and Kubernetes.',
+    impact: 'k6 load tests sustained 1,000 simulated concurrent users and 100k+ requests at 245ms median response time with 95%+ success rate.',
+    period: 'Sept 2025 - Dec 2025',
   },
   {
     num: '03',
     name: 'IUCAT Library System',
-    tagline: 'Production-grade backend on AWS ECS',
-    desc: 'JWT-authenticated backend with zero-downtime deployments behind an Application Load Balancer.',
+    link: 'https://iucat-library.onrender.com',
+    tagline: 'Fully deployed library system - live on AWS ECS and Render',
+    desc: 'A production-deployed library platform with book rentals, holds queue, AJAX search, and full observability - not just a backend exercise.',
     metrics: [
-      { val: '~75ms', label: 'avg response time' },
-      { val: 'zero', label: 'downtime deploys' },
+      { val: '75ms', label: 'avg response (k6)' },
+      { val: '100%', label: 'success rate under load' },
     ],
-    stack: ['Spring Boot', 'AWS ECS Fargate', 'PostgreSQL', 'Docker', 'GitHub Actions', 'ALB'],
-    problem: 'Library systems need strict transactional integrity for borrowing workflows and secure role-based access.',
-    approach: 'JWT authentication, RBAC, and secure REST APIs. Deployed behind an ALB with CI/CD via GitHub Actions.',
-    impact: '~75ms average response under concurrent access, zero-downtime deployments fully automated.',
-    period: 'Aug 2025 – Oct 2025',
+    stack: ['Spring Boot', 'AWS ECS Fargate', 'Docker', 'GitHub Actions', 'Prometheus', 'Grafana'],
+    problem: 'Most student library system projects stop at a basic CRUD API. This one needed to actually work - with real borrowing workflows, queue management, and a deployable setup anyone could use.',
+    approach: 'Spring Boot backend with JWT auth, RBAC, and transactional borrowing workflows including 14-day rentals, 2x extensions, and an auto-managed holds queue. Deployed to AWS ECS Fargate behind an ALB and Render via a single GitHub Actions pipeline. Structured JSON logging with MDC correlation IDs and Prometheus metrics for observability.',
+    impact: 'Live on two platforms. k6 load tests: 100% success rate, 75ms avg and 109ms P95 response across 660 requests. CI/CD pipeline fully automated - push to main deploys everywhere.',
+    period: 'Aug 2025 - Oct 2025',
   },
 ];
 
@@ -155,9 +205,37 @@ const EXPERTISE = [
     chips: ['React', 'Angular', 'Next.js', 'TypeScript', 'RxJS', 'Storybook'],
     skills: [
       { name: 'React / Next.js', pct: 95 },
-      { name: 'Angular', pct: 90 },
+      { name: 'Angular / RxJS', pct: 90 },
       { name: 'TypeScript', pct: 90 },
       { name: 'Design Systems', pct: 85 },
+    ],
+  },
+  {
+    accent: 'p-amber',
+    icon: '◈',
+    name: 'Backend & APIs',
+    desc: 'REST APIs, microservices, Spring Boot, secure auth flows, transactional databases.',
+    chips: ['Spring Boot', 'C#/.NET', 'Node.js', 'PostgreSQL', 'JWT', 'RAG / LLM'],
+    skills: [
+      { name: 'Node.js', pct: 88 },
+      { name: 'Spring Boot', pct: 82 },
+      { name: 'C# / .NET', pct: 82 },
+      { name: 'PostgreSQL / SQL', pct: 80 },
+      { name: 'RAG / LLM', pct: 72 },
+    ],
+  },
+  {
+    accent: 'p-green',
+    icon: '◎',
+    name: 'Cloud & DevOps',
+    desc: 'AWS, Azure, Docker, CI/CD pipelines, infrastructure as code, observability stacks.',
+    chips: ['AWS ECS', 'Docker', 'GitHub Actions', 'Azure DevOps', 'Terraform', 'Kubernetes'],
+    skills: [
+      { name: 'Docker', pct: 84 },
+      { name: 'CI/CD', pct: 88 },
+      { name: 'AWS ECS / Fargate', pct: 80 },
+      { name: 'Azure DevOps', pct: 78 },
+      { name: 'Kubernetes', pct: 68 },
     ],
   },
   {
@@ -168,48 +246,9 @@ const EXPERTISE = [
     chips: ['Jest', 'React Testing Library', 'Selenium', 'NUnit', 'xUnit', 'WCAG'],
     skills: [
       { name: 'Jest / RTL', pct: 90 },
-      { name: 'Accessibility', pct: 85 },
+      { name: 'Accessibility (WCAG)', pct: 85 },
       { name: 'E2E (Selenium)', pct: 80 },
-      { name: 'Coverage >80%', pct: 85 },
-    ],
-  },
-  {
-    accent: 'p-amber',
-    icon: '◈',
-    name: 'Backend & APIs',
-    desc: 'REST APIs, microservices, Spring Boot, Node.js, secure auth flows, SQL databases.',
-    chips: ['Spring Boot', 'Node.js', 'C#/.NET', 'PostgreSQL', 'GraphQL', 'JWT'],
-    skills: [
-      { name: 'Spring Boot', pct: 82 },
-      { name: 'Node.js / .NET', pct: 80 },
-      { name: 'REST / GraphQL', pct: 85 },
-      { name: 'PostgreSQL', pct: 78 },
-    ],
-  },
-  {
-    accent: 'p-green',
-    icon: '◎',
-    name: 'Cloud & DevOps',
-    desc: 'AWS ECS Fargate, Docker, Kubernetes, CI/CD pipelines, observability stacks.',
-    chips: ['AWS ECS', 'Docker', 'Kubernetes', 'GitHub Actions', 'Azure DevOps', 'Prometheus'],
-    skills: [
-      { name: 'AWS / Docker', pct: 84 },
-      { name: 'CI/CD Pipelines', pct: 88 },
-      { name: 'Kubernetes', pct: 72 },
-      { name: 'Observability', pct: 78 },
-    ],
-  },
-  {
-    accent: 'p-red',
-    icon: '◐',
-    name: 'Systems & Architecture',
-    desc: 'Microservice design, RAG pipelines, load testing at scale, data isolation.',
-    chips: ['Microservices', 'RAG / LLM', 'k6 Load Testing', 'ChromaDB', 'Grafana'],
-    skills: [
-      { name: 'Microservices', pct: 85 },
-      { name: 'LLM / RAG', pct: 76 },
-      { name: 'Load Testing', pct: 74 },
-      { name: 'Observability', pct: 78 },
+      { name: 'NUnit / xUnit', pct: 82 },
     ],
   },
 ];
@@ -218,15 +257,15 @@ const EDUCATION = [
   {
     school: 'Indiana University Bloomington',
     degree: 'M.S. in Computer Science',
-    period: 'Expected May 2026',
-    courses: ['Computer Networks', 'Software Engineering', 'Cloud Computing', 'Applied Algorithms', 'Applied Machine Learning'],
+    period: 'Expected Graduation: May 2026',
+    courses: ['Cloud Computing', 'Computer Networks', 'Software Engineering', 'Applied Algorithms', 'Applied Machine Learning'],
   },
   {
     school: 'Savitribai Phule Pune University',
-    degree: 'B.E. in Computer Science',
-    period: 'May 2018 – May 2022',
+    degree: 'B.E. in Computer Engineering · Honors in Data Science & Machine Learning',
+    period: 'May 2018 - May 2022',
     gpa: '3.8 / 4.0',
-    courses: [],
+    courses: ['Data Structures', 'Algorithms', 'Database Systems', 'Operating Systems', 'Computer Networks', 'Artificial Intelligence', 'Machine Learning'],
   },
 ];
 
@@ -248,66 +287,6 @@ const BOOT_LINES = [
   { text: '', cls: '' },
   { text: '$ exec portfolio --mode=impress', cls: 'bright' },
 ];
-
-// ── TERMINAL COMMANDS ─────────────────────────────────────────────────────────
-
-const TERMINAL_COMMANDS = {
-  help: [
-    { cls: 't-ok',   text: 'Available commands:' },
-    { cls: 't-out',  text: '  skills    → all skills overview' },
-    { cls: 't-out',  text: '  frontend  → frontend expertise' },
-    { cls: 't-out',  text: '  backend   → backend & APIs' },
-    { cls: 't-out',  text: '  cloud     → cloud & DevOps' },
-    { cls: 't-out',  text: '  projects  → project list' },
-    { cls: 't-out',  text: '  contact   → contact info' },
-    { cls: 't-out',  text: '  clear     → clear terminal' },
-  ],
-  skills: [
-    { cls: 't-ok',   text: '── Frontend' },
-    { cls: 't-out',  text: '  React, Angular, Next.js, TypeScript, RxJS' },
-    { cls: 't-ok',   text: '── Backend' },
-    { cls: 't-out',  text: '  Spring Boot, Node.js, C#/.NET, PostgreSQL' },
-    { cls: 't-ok',   text: '── Cloud' },
-    { cls: 't-out',  text: '  AWS ECS, Docker, Kubernetes, GitHub Actions' },
-    { cls: 't-ok',   text: '── Testing' },
-    { cls: 't-out',  text: '  Jest, RTL, Selenium, NUnit — 80%+ coverage' },
-  ],
-  frontend: [
-    { cls: 't-ok',   text: 'Frontend expertise:' },
-    { cls: 't-info', text: '  React / Next.js    ████████████ 95%' },
-    { cls: 't-info', text: '  Angular + RxJS     ███████████  90%' },
-    { cls: 't-info', text: '  TypeScript         ███████████  90%' },
-    { cls: 't-info', text: '  Design Systems     ██████████   85%' },
-    { cls: 't-info', text: '  WCAG Accessibility ██████████   85%' },
-  ],
-  backend: [
-    { cls: 't-ok',   text: 'Backend & APIs:' },
-    { cls: 't-warn', text: '  Spring Boot REST   ██████████   82%' },
-    { cls: 't-warn', text: '  Node.js            ████████████ 80%' },
-    { cls: 't-warn', text: '  C# / .NET          ████████     78%' },
-    { cls: 't-warn', text: '  PostgreSQL         ████████     78%' },
-  ],
-  cloud: [
-    { cls: 't-ok',   text: 'Cloud & DevOps:' },
-    { cls: 't-info', text: '  AWS ECS Fargate    ██████████   84%' },
-    { cls: 't-info', text: '  Docker + Compose   ██████████   84%' },
-    { cls: 't-info', text: '  CI/CD Pipelines    ███████████  88%' },
-    { cls: 't-info', text: '  Kubernetes         █████████    72%' },
-  ],
-  projects: [
-    { cls: 't-ok',   text: 'Projects:' },
-    { cls: 't-out',  text: '  01  DocuQuery      — RAG API, P95 <1s' },
-    { cls: 't-out',  text: '  02  Degree Chart   — AWS ECS, 100k+ req' },
-    { cls: 't-out',  text: '  03  IUCAT Library  — ~75ms avg response' },
-  ],
-  contact: [
-    { cls: 't-ok',   text: 'Contact:' },
-    { cls: 't-info', text: '  email    gauri2029@gmail.com' },
-    { cls: 't-info', text: '  linkedin linkedin.com/in/gaurimarkandey' },
-    { cls: 't-info', text: '  github   github.com/gauri2029' },
-    { cls: 't-out',  text: '  available May 2026 · US authorized' },
-  ],
-};
 
 // ── BOOT SCREEN ───────────────────────────────────────────────────────────────
 
@@ -374,7 +353,7 @@ function ThemeToggle() {
 
 // ── NAVBAR ────────────────────────────────────────────────────────────────────
 
-function Navbar() {
+function Navbar({ mode, updateMode }) {
   return (
     <nav className="navbar">
       <div className="nav-logo" style={{
@@ -392,6 +371,7 @@ function Navbar() {
         <li><a href="#experience">Experience</a></li>
         <li><a href="#projects">Projects</a></li>
         <li><a href="#expertise">Expertise</a></li>
+        <li><a href="#education">Education</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
       <div className="nav-right">
@@ -399,6 +379,7 @@ function Navbar() {
           <div className="status-dot" />
           Open to work
         </div>
+        <ModeSwitcher mode={mode} updateMode={updateMode} />
         <ThemeToggle />
       </div>
     </nav>
@@ -419,10 +400,10 @@ function Hero() {
 
           {/* LEFT — text content */}
           <div className="hero-text">
-          <div className="hero-eyebrow">
-            <span className="hero-eyebrow-dot" />
-            new_grad=true · available=may_2026
-          </div>
+            <div className="hero-eyebrow">
+              <span className="hero-eyebrow-dot" />
+              new_grad=true · available=may_2026
+            </div>
 
             <h1 className="hero-name">
               Gauri
@@ -430,14 +411,13 @@ function Hero() {
             </h1>
 
             <p className="hero-tagline">
-              Software engineer with <strong>2+ years in production</strong> - 
-              building pixel-perfect UIs, design systems, and cloud-native backends 
+              Software engineer with <strong>2+ years in production</strong> -
+              building pixel-perfect UIs, design systems, and cloud-native backends
               that handle real load.
             </p>
 
             <div className="hero-cta">
-              <a href="https://drive.google.com/file/d/104RG_mFMm7FrlhXzcqRHq6h1mQntyBI4/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn btn-primary">View Resume →
-              </a>
+              <a href="https://drive.google.com/file/d/104RG_mFMm7FrlhXzcqRHq6h1mQntyBI4/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn btn-primary">View Resume →</a>
               <a href="#contact" className="btn btn-ghost">Get in Touch</a>
               <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">LinkedIn ↗</a>
             </div>
@@ -456,21 +436,13 @@ function Hero() {
 
           {/* RIGHT — avatar */}
           <div className="hero-avatar-wrap">
-            {/* outer glow */}
             <div className="hero-avatar-glow" />
-            {/* gradient ring */}
             <div className="hero-avatar-ring" />
-            {/* floating skill badges */}
             <div className="hero-badge hero-badge-tl">React</div>
-            <div className="hero-badge hero-badge-tr">AWS</div>
+            <div className="hero-badge hero-badge-tr">Spring Boot</div>
             <div className="hero-badge hero-badge-bl">TypeScript</div>
-            <div className="hero-badge hero-badge-br">Docker</div>
-            {/* image */}
-            <img
-              src="/avatar.png"
-              alt="Gauri Markandey - software engineer"
-              className="hero-avatar-img"
-            />
+            <div className="hero-badge hero-badge-br">AWS</div>
+            <img src="/avatar.png" alt="Gauri Markandey - software engineer" className="hero-avatar-img" />
           </div>
 
         </div>
@@ -479,105 +451,6 @@ function Hero() {
   );
 }
 
-// ── TERMINAL ─────────────────────────────────────────────────────────────────
-
-const INITIAL_OUTPUT = [
-  { cls: 't-ok',  text: 'gauri-terminal — type "help" for commands' },
-  { cls: 't-out', text: '' },
-];
-
-function TerminalSection() {
-  const [open, setOpen] = useState(true);
-  const [output, setOutput] = useState(INITIAL_OUTPUT);
-  const [input, setInput] = useState('');
-  const bodyRef = useRef(null);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-  }, [output]);
-
-  const run = useCallback((cmd) => {
-    const trimmed = cmd.trim().toLowerCase();
-    if (trimmed === 'clear') { setOutput(INITIAL_OUTPUT); return; }
-    const response = TERMINAL_COMMANDS[trimmed];
-    if (response) {
-      setOutput((prev) => [...prev, { isCmd: true, text: trimmed }, ...response, { cls: 't-out', text: '' }]);
-    } else if (trimmed !== '') {
-      setOutput((prev) => [
-        ...prev,
-        { isCmd: true, text: trimmed },
-        { cls: 't-out', text: `command not found: "${trimmed}". Try "help".` },
-        { cls: 't-out', text: '' },
-      ]);
-    }
-  }, []);
-
-  const onKey = (e) => {
-    if (e.key === 'Enter') { run(input); setInput(''); }
-  };
-
-  return (
-    <div className="terminal-section">
-      <div className="terminal-section-header">
-        <span className="terminal-label">// interactive terminal</span>
-        <button
-          className="terminal-toggle-btn"
-          onClick={() => {
-            setOpen((o) => !o);
-            if (!open) setTimeout(() => inputRef.current?.focus(), 400);
-          }}
-        >
-          {open ? '▲ collapse' : '▼ expand'}
-        </button>
-      </div>
-
-      <div
-        className="terminal-wrap"
-        style={{
-          maxHeight: open ? 400 : 0,
-          opacity: open ? 1 : 0,
-          borderWidth: open ? 1 : 0,
-        }}
-      >
-        <div className="terminal-bar">
-          <div className="terminal-dot" style={{ background: '#ef4444' }} />
-          <div className="terminal-dot" style={{ background: '#f59e0b' }} />
-          <div className="terminal-dot" style={{ background: '#22c55e' }} />
-          <span className="terminal-title">gauri — zsh</span>
-        </div>
-
-        <div className="terminal-body" ref={bodyRef} onClick={() => inputRef.current?.focus()}>
-          {output.map((line, i) =>
-            line.isCmd ? (
-              <div key={i} className="t-line">
-                <span className="t-prompt">❯</span>
-                <span className="t-cmd">{line.text}</span>
-              </div>
-            ) : (
-              <span key={i} className={line.cls}>{line.text}</span>
-            )
-          )}
-        </div>
-
-        <div className="terminal-input-row">
-          <span className="t-prompt">❯</span>
-          <input
-            ref={inputRef}
-            className="terminal-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKey}
-            placeholder="type a command..."
-            autoComplete="off"
-            spellCheck={false}
-            suppressHydrationWarning
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── EXPERIENCE CARD ───────────────────────────────────────────────────────────
 
@@ -588,7 +461,7 @@ function ExperienceCard({ exp }) {
   const handleClick = () => {
     setOpen((o) => !o);
     setSwept(true);
-    setTimeout(() => setSwept(false), 600);
+    setTimeout(() => setSwept(false), 550);
   };
 
   return (
@@ -630,18 +503,25 @@ function ProjectCard({ proj }) {
   return (
     <div className={`project-card${open ? ' open' : ''}`}>
       <div className="project-header">
+      <div className="project-top-row">
         <div className="project-num">// {proj.num}</div>
-        <div className="project-name">{proj.name}</div>
-        <div className="project-desc">{proj.desc}</div>
-        <div className="project-metrics">
-          {proj.metrics.map((m) => (
-            <div key={m.label} className="metric-box">
-              <div className="metric-val">{m.val}</div>
-              <div className="metric-label">{m.label}</div>
-            </div>
-          ))}
-        </div>
+        {proj.link && (
+          <a href={proj.link} target="_blank" rel="noopener noreferrer" className="project-link-icon" title="View project">
+            ↗
+          </a>
+        )}
       </div>
+      <div className="project-name">{proj.name}</div>
+      <div className="project-desc">{proj.desc}</div>
+      <div className="project-metrics">
+        {proj.metrics.map((m) => (
+          <div key={m.label} className="metric-box">
+            <div className="metric-val">{m.val}</div>
+            <div className="metric-label">{m.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
 
       <div className="project-expand-btn" onClick={() => setOpen((o) => !o)}>
         <span>{open ? 'Collapse' : 'See details'}</span>
@@ -756,18 +636,31 @@ function useFadeUp() {
 
 export default function Page() {
   const [booted, setBooted] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const { mode, updateMode } = useWorldMode();
+
+  const handleModeChange = useCallback((m) => {
+    updateMode(m);
+    setFlash(true);
+    setTimeout(() => setFlash(false), 400);
+  }, [updateMode]);
+
+  const handleBootComplete = useCallback(() => setBooted(true), []);
+
   useFadeUp();
 
   return (
     <>
-      <BootScreen onComplete={() => setBooted(true)} />
+      <BootScreen onComplete={handleBootComplete} />
 
       <div style={{ opacity: booted ? 1 : 0, transition: 'opacity 0.9s ease' }}>
+
+        <div className={`mode-flash${flash ? ' active' : ''}`} aria-hidden="true" />
+
         <MotionLayer />
-        <Navbar />
+        <Navbar mode={mode} updateMode={handleModeChange} />
         <main>
           <Hero />
-          <TerminalSection />
 
           <hr className="section-divider" />
 
@@ -838,10 +731,10 @@ export default function Page() {
           <section id="contact">
             <div className="contact-section">
               <h2 className="contact-title fade-up">
-                Let's build<br /><span>something great.</span>
+                Let's ship<br /><span>something real.</span>
               </h2>
               <p className="contact-sub fade-up">
-                Whether it's a frontend system, a design challenge, or something that needs to scale - I'd love to hear about it.
+                Looking for new grad SWE roles starting May 2026 - frontend, fullstack, or backend. If you're building something that needs to scale, let's talk.
               </p>
               <div className="contact-links fade-up">
                 <a href="mailto:gauri2029@gmail.com" className="contact-link">✉ gauri2029@gmail.com</a>
