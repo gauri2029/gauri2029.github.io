@@ -31,7 +31,7 @@ function useWorldMode() {
 function ModeSwitcher({ mode, updateMode }) {
   const modes = [
     { id: 'professional', label: '◼ Pro', title: 'Professional' },
-    { id: 'chaos',        label: '⚡ Chaos', title: 'Chaos' },
+    { id: 'chaos', label: '⚡ Chaos', title: 'Chaos' },
   ];
   return (
     <div className="mode-switcher" aria-label="Site mode">
@@ -61,7 +61,7 @@ function MotionLayer() {
     const tick = () => {
       if (cursorRef.current) {
         cursorRef.current.style.left = pos.current.x + 'px';
-        cursorRef.current.style.top  = pos.current.y + 'px';
+        cursorRef.current.style.top = pos.current.y + 'px';
       }
       raf.current = requestAnimationFrame(tick);
     };
@@ -123,10 +123,10 @@ const EXPERIENCE = [
     period: 'Jan 2025 - Jan 2026',
     stack: ['Angular', 'TypeScript', 'RxJS', 'AWS S3', 'Jest', 'GitHub Actions'],
     bullets: [
-      '<strong>Architected & refactored</strong> Angular + TypeScript frontend integrating AWS S3 and a shared design system with reusable component libraries - ensuring WCAG accessibility and scalability, reducing dev overhead ~20%.',
-      '<strong>Optimized RxJS data flows</strong> across critical user journeys, cutting redundant requests ~20% and improving performance and responsiveness.',
-      '<strong>Owned production stability</strong> for the NIH-funded Human Reference Atlas - monitoring, debugging, and resolving live issues with zero critical user-facing disruptions.',
-      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted dev tools to accelerate iteration, reducing build and release friction ~25%.',
+      '<strong>Developed and enhanced</strong> Angular + TypeScript frontend on the NIH-funded Human Reference Atlas platform, integrating AWS S3 and building shared design system components and reusable libraries — ensuring WCAG accessibility and scalability, reducing frontend development overhead ~20%.',
+      '<strong>Designed and implemented</strong> new user-facing interfaces in Angular and TypeScript, optimizing RxJS-driven data flows across critical user journeys and reducing redundant API requests ~20%.',
+      '<strong>Owned production stability</strong> through monitoring, debugging, and resolving live issues — ensuring reliable releases with zero critical user-facing disruptions.',
+      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted developer tools to accelerate iteration and delivery, reducing build and release friction ~25%.',
     ],
   },
   {
@@ -136,11 +136,10 @@ const EXPERIENCE = [
     period: 'Jul 2022 - Jun 2024',
     stack: ['React', 'C#', '.NET', 'Node.js', 'Docker', 'Azure', 'Storybook', 'Selenium'],
     bullets: [
-      '<strong>Contributed to Angular → React migration</strong> across a large-scale healthcare frontend - reducing build complexity and improving maintainability across microservices deployed on Azure.',
-      '<strong>Developed reusable component libraries</strong> with React, Storybook, and Figma - cutting frontend development effort ~35%.',
-      '<strong>Wrote and maintained full-stack tests</strong> across unit, integration, and E2E layers using Jest, RTL, Selenium, NUnit, and xUnit - maintaining 80%+ code coverage in a regulated environment.',
-      '<strong>Built Node.js and C#/.NET REST APIs</strong> with SQL Server powering feature-based microservices, enforcing input validation, secure auth flows, and access controls in a regulated healthcare environment.',
-      '<strong>Supported CI/CD pipelines</strong> using Azure DevOps and Docker - reducing production incidents ~35% and improving release consistency.',
+      '<strong>Extended and migrated</strong> healthcare frontend modules from Angular to React, building reusable component libraries in Storybook aligned with Figma designs, cutting frontend development effort ~35%.',
+      '<strong>Developed and maintained</strong> full-stack features using Node.js and C#/.NET REST APIs with SQL Server, enforcing input validation, secure auth flows, and API access controls in a regulated healthcare environment.',
+      '<strong>Maintained ~80%+ code coverage</strong> across unit, integration, and E2E layers using Jest, React Testing Library, Selenium, NUnit, and xUnit.',
+      '<strong>Built CI/CD pipelines</strong> with Azure DevOps and Docker, automating deployments and reducing production incidents ~35% within an agile delivery workflow.',
     ],
   },
 ];
@@ -150,32 +149,32 @@ const PROJECTS = [
     num: '01',
     name: 'DocuQuery',
     link: 'https://github.com/gauri2029/docuquery',
-    tagline: 'Internal document assistant for developers',
-    desc: 'Built to solve a real need - a secure, self-hosted assistant that lets developers query internal docs in plain English and get cited answers instantly.',
+    tagline: 'AI-powered documentation assistant for developers',
+    desc: 'A secure, self-hosted assistant that lets developers query internal docs in plain English and get source-cited answers instantly — built to keep sensitive documentation off third-party servers.',
     metrics: [
       { val: 'P95', label: 'sub-second latency' },
       { val: '5', label: 'orchestrated services' },
     ],
     stack: ['Spring Boot', 'OpenAI', 'ChromaDB', 'PostgreSQL', 'Docker', 'Prometheus', 'Grafana'],
-    problem: 'Developers waste time digging through internal docs. Existing AI tools send data to the cloud - not viable for private or sensitive documentation.',
-    approach: 'Self-hosted RAG pipeline - documents are chunked, embedded via OpenAI, and stored in ChromaDB. Queries run semantic search over stored chunks and pass context to GPT-4o-mini with strict prompt constraints to prevent hallucination.',
-    impact: 'P95 query latency under 1s. Full observability with Micrometer metrics - P50/P95/P99 latency, error rates, and throughput tracked via Prometheus and Grafana.',
+    problem: 'Developers waste time digging through internal docs. Most AI tools send data to third-party servers — not viable for private or sensitive documentation.',
+    approach: 'Self-hosted RAG pipeline: documents are chunked with overlapping windows, embedded via OpenAI text-embedding-3-small, and stored in ChromaDB. Queries run semantic search over stored chunks and pass the top results to GPT-4o-mini with strict prompt constraints to prevent hallucination and enforce source citations.',
+    impact: 'P95 query latency under 1 second. Full observability with custom Micrometer metrics — P50/P95/P99 latency, error rates, and throughput tracked via Prometheus and Grafana dashboards.',
     period: 'Dec 2025 - Jan 2026',
   },
   {
     num: '02',
     name: 'Degree Flowchart',
     link: 'https://github.com/degree-flowchart',
-    tagline: 'Microservices architecture with Angular frontend',
-    desc: 'Not your average degree planner - a distributed system with a dynamic flowchart UI, OAuth login, schedule exports, and a microservices backend built to scale.',
+    tagline: 'Cloud-native degree planning with Angular and Spring Boot microservices',
+    desc: 'A distributed degree planning platform with a dynamic Angular UI, OAuth-based authentication via Keycloak, schedule exports, and a microservices backend built to scale under real load.',
     metrics: [
       { val: '245ms', label: 'median response (k6)' },
       { val: '100k+', label: 'requests load tested' },
     ],
-    stack: ['Spring Boot', 'Angular', 'PostgreSQL', 'Docker', 'Terraform', 'k6', 'Prometheus'],
-    problem: 'Students had no structured system to visualize and plan their degree path - relying on spreadsheets, manual tracking, and advisor emails to figure out what to take next.',
-    approach: 'Distributed system with independent Spring Boot microservices and PostgreSQL databases. Angular frontend with a dynamic flowchart - students can select, move, and schedule courses, export schedules, and log in securely via OAuth. Infrastructure provisioned with Terraform and Kubernetes.',
-    impact: 'k6 load tests sustained 1,000 simulated concurrent users and 100k+ requests at 245ms median response time with 95%+ success rate.',
+    stack: ['Angular', 'TypeScript', 'Spring Boot', 'PostgreSQL', 'Docker', 'Kubernetes', 'Keycloak', 'k6', 'Prometheus'],
+    problem: 'Students had no structured system to visualize and plan their degree path — relying on spreadsheets, manual tracking, and advisor emails to figure out what to take next.',
+    approach: 'Built the Angular + TypeScript frontend with a dynamic course planning UI and OAuth-based authentication via Keycloak, connecting distributed Spring Boot microservices with independent PostgreSQL databases through an API gateway. Services containerized with Docker and configured with Kubernetes manifests for AWS deployment.',
+    impact: 'k6 load tests sustained 1,000 concurrent users and 100,000+ requests at 245ms median response time with 95%+ success rate.',
     period: 'Sept 2025 - Dec 2025',
   },
   {
@@ -188,9 +187,9 @@ const PROJECTS = [
       { val: '75ms', label: 'avg response (k6)' },
       { val: '100%', label: 'success rate under load' },
     ],
-    stack: ['Spring Boot', 'AWS ECS Fargate', 'Docker', 'GitHub Actions', 'Prometheus', 'Grafana'],
+    stack: ['Spring Boot', 'AWS ECS Fargate', 'Docker', 'GitHub Actions', 'Prometheus'],
     problem: 'Most student library system projects stop at a basic CRUD API. This one needed to actually work - with real borrowing workflows, queue management, and a deployable setup anyone could use.',
-    approach: 'Spring Boot backend with JWT auth, RBAC, and transactional borrowing workflows including 14-day rentals, 2x extensions, and an auto-managed holds queue. Deployed to AWS ECS Fargate behind an ALB and Render via a single GitHub Actions pipeline. Structured JSON logging with MDC correlation IDs and Prometheus metrics for observability.',
+    approach: 'Spring Boot backend with role-based access control, session-based authentication, and transactional borrowing workflows including 14-day rentals, 2x extensions, and an auto-managed holds queue. Deployed to AWS ECS Fargate behind an ALB and Render via a single GitHub Actions pipeline. Structured JSON logging with MDC correlation IDs and Prometheus metrics for observability.',
     impact: 'Live on two platforms. k6 load tests: 100% success rate, 75ms avg and 109ms P95 response across 660 requests. CI/CD pipeline fully automated - push to main deploys everywhere.',
     period: 'Aug 2025 - Oct 2025',
   },
@@ -417,7 +416,7 @@ function Hero() {
             </p>
 
             <div className="hero-cta">
-              <a href="https://drive.google.com/file/d/104RG_mFMm7FrlhXzcqRHq6h1mQntyBI4/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn btn-primary">View Resume →</a>
+              <a href="https://drive.google.com/file/d/18Sqk9BWoF2OWuwOGDjTkC_3rtmnv5JB6/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn btn-primary">View Resume →</a>
               <a href="#contact" className="btn btn-ghost">Get in Touch</a>
               <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">LinkedIn ↗</a>
             </div>
@@ -503,25 +502,25 @@ function ProjectCard({ proj }) {
   return (
     <div className={`project-card${open ? ' open' : ''}`}>
       <div className="project-header">
-      <div className="project-top-row">
-        <div className="project-num">// {proj.num}</div>
-        {proj.link && (
-          <a href={proj.link} target="_blank" rel="noopener noreferrer" className="project-link-icon" title="View project">
-            ↗
-          </a>
-        )}
+        <div className="project-top-row">
+          <div className="project-num">// {proj.num}</div>
+          {proj.link && (
+            <a href={proj.link} target="_blank" rel="noopener noreferrer" className="project-link-icon" title="View project">
+              ↗
+            </a>
+          )}
+        </div>
+        <div className="project-name">{proj.name}</div>
+        <div className="project-desc">{proj.desc}</div>
+        <div className="project-metrics">
+          {proj.metrics.map((m) => (
+            <div key={m.label} className="metric-box">
+              <div className="metric-val">{m.val}</div>
+              <div className="metric-label">{m.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="project-name">{proj.name}</div>
-      <div className="project-desc">{proj.desc}</div>
-      <div className="project-metrics">
-        {proj.metrics.map((m) => (
-          <div key={m.label} className="metric-box">
-            <div className="metric-val">{m.val}</div>
-            <div className="metric-label">{m.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
 
       <div className="project-expand-btn" onClick={() => setOpen((o) => !o)}>
         <span>{open ? 'Collapse' : 'See details'}</span>
@@ -734,7 +733,7 @@ export default function Page() {
                 Let's ship<br /><span>something real.</span>
               </h2>
               <p className="contact-sub fade-up">
-                Looking for new grad SWE roles starting May 2026 - frontend, fullstack, or backend. If you're building something that needs to scale, let's talk.
+                Graduating May 2026, available now. Looking for full-stack, frontend, or backend SWE roles where the work actually matters.
               </p>
               <div className="contact-links fade-up">
                 <a href="mailto:gauri2029@gmail.com" className="contact-link">✉ gauri2029@gmail.com</a>
@@ -748,7 +747,7 @@ export default function Page() {
         <footer>
           <span style={{ fontWeight: 600 }}>Gauri Markandey</span>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text3)' }}>
-            open to work · may 2026
+            © 2026 · Built with Next.js & Tailwind CSS
           </span>
         </footer>
       </div>
