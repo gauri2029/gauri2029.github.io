@@ -1,2 +1,2 @@
 # gauri2029.github.io
-Portfolio website
+Personal portfolio showcasing production frontend work, full-stack projects, and open-source contributions.
