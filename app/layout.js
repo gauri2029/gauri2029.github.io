@@ -1,16 +1,40 @@
 import './globals.css';
 
+const SITE_URL = 'https://www.gaurimarkandey.com';
+const DESCRIPTION =
+  'Frontend Software Engineer with 2+ years in production, building interfaces in React, Angular, and TypeScript with full-stack and cloud breadth in Spring Boot, AWS, and Docker.';
+
 export const metadata = {
-  title: 'Gauri Markandey',
-  description: 'Frontend engineer who builds systems, not just interfaces.',
-  icons: { icon: '/favicon.svg' },
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'Gauri Markandey — Frontend Software Engineer',
+    template: '%s · Gauri Markandey',
+  },
+  description: DESCRIPTION,
+  keywords: ['Gauri Markandey', 'Frontend Software Engineer', 'React', 'Angular', 'TypeScript', 'Spring Boot', 'Portfolio'],
+  authors: [{ name: 'Gauri Markandey', url: SITE_URL }],
+  robots: { index: true, follow: true },
+  icons: { icon: '/favicon.svg', shortcut: '/favicon.svg' },
+  openGraph: {
+    type: 'website',
+    url: SITE_URL,
+    title: 'Gauri Markandey — Frontend Software Engineer',
+    description: DESCRIPTION,
+    siteName: 'Gauri Markandey',
+    images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: 'Gauri Markandey — Frontend Software Engineer' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Gauri Markandey — Frontend Software Engineer',
+    description: DESCRIPTION,
+    images: ['/og-image.jpg'],
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-      <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C5CFF'/%3E%3Cstop offset='1' stop-color='%2322D3EE'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ctext x='16' y='22' font-family='Arial Black,sans-serif' font-size='14' font-weight='900' fill='white' text-anchor='middle'%3EGM%3C/text%3E%3C/svg%3E" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
