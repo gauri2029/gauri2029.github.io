@@ -94,15 +94,23 @@ function useTilt() {
 
 // ── STAR FIELD ────────────────────────────────────────────────────────────────
 // Plain <canvas> + requestAnimationFrame — no charting/animation library.
-// Ambient hyperspace-style drift, plus three interaction responses:
-//   - pointer move nudges nearby stars outward (hover-capable, fine pointer only)
-//   - click/tap spawns a short-lived particle burst from that point
+// Held/slow drift while the boot sequence is up; the moment `booted` flips
+// true it releases a decaying hyperspace "warp" burst synchronized with the
+// cinematic content reveal, then settles into ambient drift with three
+// interaction responses:
+//   - pointer move nudges nearby stars outward AND throttle-emits a small
+//     fading trail (hover-capable, fine pointer only — touch gets neither)
 //   - scroll gives the drift a brief speed boost that decays back to baseline
-// Respects prefers-reduced-motion (draws one static frame, no listeners) and
-// re-tints itself for the active theme by reading data-theme each frame.
+// All state lives in plain closures/refs (no React state in the hot path),
+// listeners are passive, and drawing is transform/opacity only. Respects
+// prefers-reduced-motion (draws one static frame, no listeners) and re-tints
+// itself for the active theme by reading data-theme each frame.
 
-function StarField() {
+function StarField({ booted }) {
   const canvasRef = useRef(null);
+  const bootedRef = useRef(booted);
+
+  useEffect(() => { bootedRef.current = booted; }, [booted]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -116,10 +124,15 @@ function StarField() {
     let stars = [];
     let bursts = [];
     let scrollBoost = 0;
+    let warpBoost = 0;
+    let wasBooted = bootedRef.current;
+    let lastTrailAt = 0;
     const pointer = { x: -9999, y: -9999, active: false };
     const STAR_COUNT = 130;
+    const BOOT_SPEED = 0.2;
     const BASE_SPEED = 1.6;
-    const MAX_BURST = 160;
+    const MAX_BURST = 90;
+    const TRAIL_INTERVAL_MS = 45;
 
     const makeStar = () => ({
       x: (Math.random() - 0.5) * w,
@@ -138,17 +151,18 @@ function StarField() {
     };
     resize();
 
-    const spawnBurst = (x, y) => {
-      const count = 16;
+    // small trail puffs from pointer movement — not a full burst, just 1-2
+    // quick-fading dots per emission, throttled and capped.
+    const spawnTrail = (x, y) => {
+      const count = 2;
       for (let i = 0; i < count; i++) {
-        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
-        const speed = 1.2 + Math.random() * 2.4;
         bursts.push({
-          x, y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
+          x: x + (Math.random() - 0.5) * 6,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: (Math.random() - 0.5) * 0.6,
           life: 1,
-          size: 1.4 + Math.random() * 1.6,
+          size: 1 + Math.random() * 1.2,
         });
       }
       if (bursts.length > MAX_BURST) bursts = bursts.slice(bursts.length - MAX_BURST);
@@ -159,11 +173,19 @@ function StarField() {
       const cx = w / 2;
       const cy = h / 2;
       const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const starColor = dark ? '226,232,255' : '76,111,255';
+      const starColor = dark ? '226,232,255' : '124,58,237';
       ctx.fillStyle = `rgba(${starColor},0.9)`;
 
-      const speed = BASE_SPEED + scrollBoost;
+      // boot -> revealed transition: release a decaying warp burst exactly
+      // once, synchronized with the cinematic content reveal.
+      if (!wasBooted && bootedRef.current) {
+        warpBoost = 30;
+        wasBooted = true;
+      }
+
+      const speed = wasBooted ? BASE_SPEED + scrollBoost + warpBoost : BOOT_SPEED;
       scrollBoost *= 0.92;
+      warpBoost *= 0.91;
 
       for (const s of stars) {
         if (!reduceMotion) {
@@ -201,7 +223,7 @@ function StarField() {
           b.y += b.vy;
           b.vx *= 0.96;
           b.vy *= 0.96;
-          b.life -= 0.02;
+          b.life -= 0.035;
           if (b.life > 0) {
             ctx.globalAlpha = b.life;
             ctx.beginPath();
@@ -228,16 +250,19 @@ function StarField() {
     let onMove;
     let onLeave;
     if (!reduceMotion && canHover) {
-      onMove = (e) => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; };
+      onMove = (e) => {
+        pointer.x = e.clientX;
+        pointer.y = e.clientY;
+        pointer.active = true;
+        const now = performance.now();
+        if (now - lastTrailAt > TRAIL_INTERVAL_MS) {
+          lastTrailAt = now;
+          spawnTrail(e.clientX, e.clientY);
+        }
+      };
       onLeave = () => { pointer.active = false; };
       window.addEventListener('mousemove', onMove, { passive: true });
       window.addEventListener('mouseleave', onLeave, { passive: true });
-    }
-
-    let onClick;
-    if (!reduceMotion) {
-      onClick = (e) => spawnBurst(e.clientX, e.clientY);
-      window.addEventListener('click', onClick, { passive: true });
     }
 
     let onScroll;
@@ -256,7 +281,6 @@ function StarField() {
       window.removeEventListener('resize', resize);
       if (onMove) window.removeEventListener('mousemove', onMove);
       if (onLeave) window.removeEventListener('mouseleave', onLeave);
-      if (onClick) window.removeEventListener('click', onClick);
       if (onScroll) window.removeEventListener('scroll', onScroll);
     };
   }, []);
@@ -266,7 +290,7 @@ function StarField() {
 
 // ── MOTION LAYER ──────────────────────────────────────────────────────────────
 
-function MotionLayer() {
+function MotionLayer({ booted }) {
   useEffect(() => {
     const navbar = document.querySelector('.navbar');
     const onScroll = () => {
@@ -305,7 +329,7 @@ function MotionLayer() {
 
   return (
     <>
-      <StarField />
+      <StarField booted={booted} />
       <div className="dot-grid" aria-hidden="true" />
     </>
   );
@@ -531,7 +555,7 @@ function Navbar({ mode, updateMode }) {
         fontSize: 18,
         fontWeight: 800,
         letterSpacing: '-0.02em',
-        filter: 'drop-shadow(0 0 8px rgba(76,141,255,0.4))',
+        filter: 'drop-shadow(0 0 8px rgba(139,92,246,0.4))',
       }}>GM</div>
       <ul className="nav-links">
         <li><a href="#experience">Experience</a></li>
@@ -600,6 +624,10 @@ function Hero() {
           <div className="hero-avatar-wrap">
             <div className="hero-avatar-glow" />
             <div className="hero-avatar-ring" />
+            <div className="hero-avatar-orbit" aria-hidden="true">
+              <span className="hero-avatar-orbit-dot dot-a" />
+              <span className="hero-avatar-orbit-dot dot-b" />
+            </div>
             <div className="hero-badge hero-badge-tl">React</div>
             <div className="hero-badge hero-badge-tr">Spring Boot</div>
             <div className="hero-badge hero-badge-bl">TypeScript</div>
@@ -815,11 +843,11 @@ export default function Page() {
     <>
       <BootScreen onComplete={handleBootComplete} />
 
-      <div style={{ opacity: booted ? 1 : 0, transition: 'opacity 0.9s ease' }}>
+      <div className={booted ? 'is-booted' : ''} style={{ opacity: booted ? 1 : 0, transition: 'opacity 0.4s ease' }}>
 
         <div className={`mode-flash${flash ? ' active' : ''}`} aria-hidden="true" />
 
-        <MotionLayer />
+        <MotionLayer booted={booted} />
         <Navbar mode={mode} updateMode={handleModeChange} />
         <main>
           <Hero />
@@ -831,7 +859,7 @@ export default function Page() {
             <h2 className="section-title slide-left">Work Experience</h2>
             <div className="timeline" style={{ paddingLeft: 4 }}>
               {EXPERIENCE.map((exp, i) => (
-                <div key={exp.company} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.1}s` }}>
+                <div key={exp.company} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.18}s` }}>
                   <ExperienceCard exp={exp} />
                 </div>
               ))}
@@ -845,7 +873,7 @@ export default function Page() {
             <h2 className="section-title slide-left">Projects</h2>
             <div className="projects-list">
               {PROJECTS.map((p, i) => (
-                <div key={p.num} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.08}s` }}>
+                <div key={p.num} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.16}s` }}>
                   <ProjectCard proj={p} reverse={i % 2 === 1} />
                 </div>
               ))}
@@ -854,7 +882,7 @@ export default function Page() {
             <h3 className="subsection-title fade-up">More on GitHub</h3>
             <div className="pinned-grid">
               {PINNED_REPOS.map((repo, i) => (
-                <div key={repo.org} className="fade-up" style={{ transitionDelay: `${i * 0.08}s` }}>
+                <div key={repo.org} className="fade-up" style={{ transitionDelay: `${i * 0.12}s` }}>
                   <PinnedCard repo={repo} />
                 </div>
               ))}
@@ -867,7 +895,7 @@ export default function Page() {
             <h2 className="section-title slide-left">Education</h2>
             <div className="timeline" style={{ paddingLeft: 4 }}>
               {EDUCATION.map((e, i) => (
-                <div key={e.school} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.1}s` }}>
+                <div key={e.school} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.18}s` }}>
                   <EducationCard edu={e} />
                 </div>
               ))}
