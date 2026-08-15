@@ -38,9 +38,11 @@ function ModeSwitcher({ mode, updateMode }) {
       {modes.map((m) => (
         <button
           key={m.id}
+          type="button"
           className={`mode-btn${mode === m.id ? ' active' : ''}`}
           onClick={() => updateMode(m.id)}
           title={m.title}
+          aria-pressed={mode === m.id}
         >
           {m.label}
         </button>
@@ -49,25 +51,303 @@ function ModeSwitcher({ mode, updateMode }) {
   );
 }
 
-// ── MOTION LAYER ──────────────────────────────────────────────────────────────
+// ── TILT HOOK ─────────────────────────────────────────────────────────────────
+// Tracks pointer position over a card and exposes it as CSS custom properties
+// so hover-capable, non-touch pointers get a live tilt + light-reflection
+// response. On touch devices, or when the browser can't hover, or when the
+// user prefers reduced motion, this is a no-op and cards fall back to the
+// static CSS hover transform.
 
-function MotionLayer() {
-  const cursorRef = useRef(null);
-  const pos = useRef({ x: -999, y: -999 });
+function useTilt() {
+  const capable = useRef(null);
   const raf = useRef(null);
+  const pending = useRef(null);
+
+  const isCapable = () => {
+    if (capable.current === null) {
+      capable.current =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+    return capable.current;
+  };
+
+  const flush = () => {
+    raf.current = null;
+    const p = pending.current;
+    if (!p) return;
+    // Chaos mode drives its own fixed bounce transform on these cards and
+    // never reads --tilt-x/--tilt-y, so writing them there only forces
+    // pointless style recalculation on every mousemove (and can visibly
+    // fight the elastic hover transition). Skip entirely in that mode.
+    if (document.documentElement.getAttribute('data-mode') === 'chaos') return;
+    p.el.style.setProperty('--tilt-x', p.tiltX);
+    p.el.style.setProperty('--tilt-y', p.tiltY);
+    p.el.style.setProperty('--glow-x', p.glowX);
+    p.el.style.setProperty('--glow-y', p.glowY);
+  };
+
+  // Batched to at most once per animation frame — raw mousemove can fire
+  // far faster than the display refreshes, and writing the custom
+  // properties that often just churns style recalculation without any
+  // visible benefit, which is what made the tilt feel jittery.
+  const onMouseMove = useCallback((e) => {
+    if (!isCapable()) return;
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    pending.current = {
+      el,
+      tiltX: `${((py - 0.5) * -6).toFixed(2)}deg`,
+      tiltY: `${((px - 0.5) * 8).toFixed(2)}deg`,
+      glowX: `${(px * 100).toFixed(1)}%`,
+      glowY: `${(py * 100).toFixed(1)}%`,
+    };
+    if (raf.current === null) raf.current = requestAnimationFrame(flush);
+  }, []);
+
+  const onMouseLeave = useCallback((e) => {
+    if (raf.current !== null) { cancelAnimationFrame(raf.current); raf.current = null; }
+    pending.current = null;
+    const el = e.currentTarget;
+    el.style.removeProperty('--tilt-x');
+    el.style.removeProperty('--tilt-y');
+  }, []);
+
+  return { onMouseMove, onMouseLeave };
+}
+
+// ── STAR FIELD ────────────────────────────────────────────────────────────────
+// Plain <canvas> + requestAnimationFrame — no charting/animation library.
+// Held/slow drift while the boot sequence is up; the moment `booted` flips
+// true it releases a decaying hyperspace "warp" burst synchronized with the
+// cinematic content reveal, then settles into ambient drift with three
+// interaction responses:
+//   - pointer move nudges nearby stars outward AND throttle-emits a small
+//     fading trail (hover-capable, fine pointer only — touch gets neither)
+//   - scroll gives the drift a brief speed boost that decays back to baseline
+// All state lives in plain closures/refs (no React state in the hot path),
+// listeners are passive, and drawing is transform/opacity only. Respects
+// prefers-reduced-motion (draws one static frame, no listeners) and re-tints
+// itself for the active theme by reading data-theme each frame.
+
+function StarField({ booted }) {
+  const canvasRef = useRef(null);
+  const bootedRef = useRef(booted);
+
+  useEffect(() => { bootedRef.current = booted; }, [booted]);
 
   useEffect(() => {
-    const onMove = (e) => { pos.current = { x: e.clientX, y: e.clientY }; };
-    const tick = () => {
-      if (cursorRef.current) {
-        cursorRef.current.style.left = pos.current.x + 'px';
-        cursorRef.current.style.top = pos.current.y + 'px';
-      }
-      raf.current = requestAnimationFrame(tick);
-    };
-    window.addEventListener('mousemove', onMove, { passive: true });
-    raf.current = requestAnimationFrame(tick);
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
+    let w = 0;
+    let h = 0;
+    let stars = [];
+    let fieldStars = [];
+    let bursts = [];
+    let scrollBoost = 0;
+    let warpBoost = 0;
+    let wasBooted = bootedRef.current;
+    let lastTrailAt = 0;
+    const pointer = { x: -9999, y: -9999, active: false };
+    const STAR_COUNT = 170;
+    // A second, static layer spread evenly across the whole canvas. The
+    // hyperspace stars above use a perspective projection that naturally
+    // clusters near the vanishing point (center) — most of a star's life is
+    // spent at large z, which projects close to center — so on its own it
+    // reads as "stars in the middle, empty at the edges". This layer fixes
+    // that by covering corners/sides uniformly, independent of the drift.
+    const FIELD_STAR_COUNT = 110;
+    const BOOT_SPEED = 0.2;
+    const BASE_SPEED = 1.6;
+    const MAX_BURST = 90;
+    const TRAIL_INTERVAL_MS = 45;
+
+    const makeStar = () => ({
+      x: (Math.random() - 0.5) * w,
+      y: (Math.random() - 0.5) * h,
+      z: Math.random() * w,
+    });
+
+    const makeFieldStar = () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: 0.4 + Math.random() * 1.1,
+      baseAlpha: 0.15 + Math.random() * 0.35,
+      phase: Math.random() * Math.PI * 2,
+    });
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.offsetWidth;
+      h = canvas.offsetHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      stars = Array.from({ length: STAR_COUNT }, makeStar);
+      fieldStars = Array.from({ length: FIELD_STAR_COUNT }, makeFieldStar);
+    };
+    resize();
+
+    // small trail puffs from pointer movement — not a full burst, just 1-2
+    // quick-fading dots per emission, throttled and capped.
+    const spawnTrail = (x, y) => {
+      const count = 2;
+      for (let i = 0; i < count; i++) {
+        bursts.push({
+          x: x + (Math.random() - 0.5) * 6,
+          y: y + (Math.random() - 0.5) * 6,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: (Math.random() - 0.5) * 0.6,
+          life: 1,
+          size: 1 + Math.random() * 1.2,
+        });
+      }
+      if (bursts.length > MAX_BURST) bursts = bursts.slice(bursts.length - MAX_BURST);
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      const cx = w / 2;
+      const cy = h / 2;
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const starColor = dark ? '226,232,255' : '124,58,237';
+      ctx.fillStyle = `rgba(${starColor},0.9)`;
+
+      // static field layer first (behind the hyperspace stars), evenly
+      // covering the whole canvas including edges/corners
+      const t = reduceMotion ? 0 : performance.now() / 1000;
+      for (const fs of fieldStars) {
+        const alpha = reduceMotion ? fs.baseAlpha : fs.baseAlpha + 0.12 * Math.sin(t * 0.6 + fs.phase);
+        ctx.globalAlpha = Math.max(0.05, alpha);
+        ctx.beginPath();
+        ctx.arc(fs.x, fs.y, fs.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // boot -> revealed transition: release a decaying warp burst exactly
+      // once, synchronized with the cinematic content reveal.
+      if (!wasBooted && bootedRef.current) {
+        warpBoost = 30;
+        wasBooted = true;
+      }
+
+      const speed = wasBooted ? BASE_SPEED + scrollBoost + warpBoost : BOOT_SPEED;
+      scrollBoost *= 0.92;
+      warpBoost *= 0.91;
+
+      for (const s of stars) {
+        if (!reduceMotion) {
+          s.z -= speed;
+          if (s.z <= 1) Object.assign(s, makeStar(), { z: w });
+        }
+        const k = 128 / s.z;
+        let sx = s.x * k + cx;
+        let sy = s.y * k + cy;
+        if (sx < 0 || sx > w || sy < 0 || sy > h) continue;
+
+        if (pointer.active) {
+          const dx = sx - pointer.x;
+          const dy = sy - pointer.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const radius = 110;
+          if (dist < radius && dist > 0.01) {
+            const push = ((radius - dist) / radius) * 18;
+            sx += (dx / dist) * push;
+            sy += (dy / dist) * push;
+          }
+        }
+
+        const size = Math.max(0.4, (1 - s.z / w) * 2.2);
+        ctx.globalAlpha = Math.max(0.12, 1 - s.z / w);
+        ctx.beginPath();
+        ctx.arc(sx, sy, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (bursts.length) {
+        const next = [];
+        for (const b of bursts) {
+          b.x += b.vx;
+          b.y += b.vy;
+          b.vx *= 0.96;
+          b.vy *= 0.96;
+          b.life -= 0.035;
+          if (b.life > 0) {
+            ctx.globalAlpha = b.life;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.size * b.life, 0, Math.PI * 2);
+            ctx.fill();
+            next.push(b);
+          }
+        }
+        bursts = next;
+      }
+      ctx.globalAlpha = 1;
+    };
+
+    let raf = null;
+    if (reduceMotion) {
+      draw();
+    } else {
+      const tick = () => { draw(); raf = requestAnimationFrame(tick); };
+      raf = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('resize', resize);
+
+    let onMove;
+    let onLeave;
+    if (!reduceMotion && canHover) {
+      onMove = (e) => {
+        pointer.x = e.clientX;
+        pointer.y = e.clientY;
+        pointer.active = true;
+        const now = performance.now();
+        if (now - lastTrailAt > TRAIL_INTERVAL_MS) {
+          lastTrailAt = now;
+          spawnTrail(e.clientX, e.clientY);
+        }
+      };
+      onLeave = () => { pointer.active = false; };
+      window.addEventListener('mousemove', onMove, { passive: true });
+      window.addEventListener('mouseleave', onLeave, { passive: true });
+    }
+
+    let onScroll;
+    if (!reduceMotion) {
+      let lastY = window.scrollY;
+      onScroll = () => {
+        const y = window.scrollY;
+        scrollBoost = Math.min(6, scrollBoost + Math.abs(y - lastY) * 0.06);
+        lastY = y;
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      if (onMove) window.removeEventListener('mousemove', onMove);
+      if (onLeave) window.removeEventListener('mouseleave', onLeave);
+      if (onScroll) window.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
+  return <canvas className="starfield" ref={canvasRef} aria-hidden="true" />;
+}
+
+// ── MOTION LAYER ──────────────────────────────────────────────────────────────
+
+function MotionLayer({ booted }) {
+  useEffect(() => {
     const navbar = document.querySelector('.navbar');
     const onScroll = () => {
       if (!navbar) return;
@@ -97,18 +377,16 @@ function MotionLayer() {
     glows.forEach((g) => glowObserver.observe(g));
 
     return () => {
-      window.removeEventListener('mousemove', onMove);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('scroll', onParallax);
-      cancelAnimationFrame(raf.current);
       glowObserver.disconnect();
     };
   }, []);
 
   return (
     <>
+      <StarField booted={booted} />
       <div className="dot-grid" aria-hidden="true" />
-      <div className="cursor-glow" ref={cursorRef} aria-hidden="true" />
     </>
   );
 }
@@ -116,19 +394,6 @@ function MotionLayer() {
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
 const EXPERIENCE = [
-  {
-    role: 'Software Developer',
-    company: 'Cyberinfrastructure for Network Science Center (CNS)',
-    location: 'Bloomington, IN',
-    period: 'Jan 2025 - Jan 2026',
-    stack: ['Angular', 'TypeScript', 'RxJS', 'AWS S3', 'Jest', 'GitHub Actions'],
-    bullets: [
-      '<strong>Developed and enhanced</strong> Angular + TypeScript frontend on the NIH-funded Human Reference Atlas platform, integrating AWS S3 and building shared design system components and reusable libraries — ensuring WCAG accessibility and scalability, reducing frontend development overhead ~20%.',
-      '<strong>Designed and implemented</strong> new user-facing interfaces in Angular and TypeScript, optimizing RxJS-driven data flows across critical user journeys and reducing redundant API requests ~20%.',
-      '<strong>Owned production stability</strong> through monitoring, debugging, and resolving live issues — ensuring reliable releases with zero critical user-facing disruptions.',
-      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted developer tools to accelerate iteration and delivery, reducing build and release friction ~25%.',
-    ],
-  },
   {
     role: 'Software Engineer',
     company: 'Tietoevry India Pvt. Ltd.',
@@ -142,6 +407,19 @@ const EXPERIENCE = [
       '<strong>Built CI/CD pipelines</strong> with Azure DevOps and Docker, automating deployments and reducing production incidents ~35% within an agile delivery workflow.',
     ],
   },
+  {
+    role: 'Software Developer',
+    company: 'Cyberinfrastructure for Network Science Center (CNS)',
+    location: 'Bloomington, IN',
+    period: 'Jan 2025 - Jan 2026',
+    stack: ['Angular', 'TypeScript', 'RxJS', 'AWS S3', 'Jest', 'GitHub Actions'],
+    bullets: [
+      '<strong>Developed and enhanced</strong> Angular + TypeScript frontend on the NIH-funded Human Reference Atlas platform, integrating AWS S3 and building shared design system components and reusable libraries — ensuring WCAG accessibility and scalability, reducing frontend development overhead ~20%.',
+      '<strong>Designed and implemented</strong> new user-facing interfaces in Angular and TypeScript, optimizing RxJS-driven data flows across critical user journeys and reducing redundant API requests ~20%.',
+      '<strong>Owned production stability</strong> through monitoring, debugging, and resolving live issues — ensuring reliable releases with zero critical user-facing disruptions.',
+      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted developer tools to accelerate iteration and delivery, reducing build and release friction ~25%.',
+    ],
+  },
 ];
 
 const PROJECTS = [
@@ -149,6 +427,8 @@ const PROJECTS = [
     num: '01',
     name: 'DocuQuery',
     link: 'https://github.com/gauri2029/docuquery',
+    image: 'https://loremflickr.com/640/480/artificialintelligence,circuitboard?lock=101',
+    accent: 'cobalt',
     tagline: 'AI-powered documentation assistant for developers',
     desc: 'A secure, self-hosted assistant that lets developers query internal docs in plain English and get source-cited answers instantly — built to keep sensitive documentation off third-party servers.',
     metrics: [
@@ -165,6 +445,8 @@ const PROJECTS = [
     num: '02',
     name: 'Degree Flowchart',
     link: 'https://github.com/degree-flowchart',
+    image: 'https://loremflickr.com/640/480/graduation,university?lock=102',
+    accent: 'coral',
     tagline: 'Cloud-native degree planning with Angular and Spring Boot microservices',
     desc: 'A distributed degree planning platform with a dynamic Angular UI, OAuth-based authentication via Keycloak, schedule exports, and a microservices backend built to scale under real load.',
     metrics: [
@@ -181,6 +463,8 @@ const PROJECTS = [
     num: '03',
     name: 'IUCAT Library System',
     link: 'https://iucat-library.onrender.com',
+    image: 'https://loremflickr.com/640/480/library,bookshelf?lock=103',
+    accent: 'amber',
     tagline: 'Fully deployed library system - live on AWS ECS and Render',
     desc: 'A production-deployed library platform with book rentals, holds queue, AJAX search, and full observability - not just a backend exercise.',
     metrics: [
@@ -195,76 +479,43 @@ const PROJECTS = [
   },
 ];
 
-const EXPERTISE = [
+const PINNED_REPOS = [
   {
-    accent: 'p-cyan',
-    icon: '⬡',
-    name: 'Frontend Engineering',
-    desc: 'Design systems, component architecture, performance optimization, WCAG accessibility.',
-    chips: ['React', 'Angular', 'Next.js', 'TypeScript', 'RxJS', 'Storybook'],
-    skills: [
-      { name: 'React / Next.js', pct: 95 },
-      { name: 'Angular / RxJS', pct: 90 },
-      { name: 'TypeScript', pct: 90 },
-      { name: 'Design Systems', pct: 85 },
-    ],
+    name: 'hra-ui',
+    org: 'hubmapconsortium/hra-ui',
+    link: 'https://github.com/hubmapconsortium/hra-ui',
+    desc: 'HRA UIs monorepo powering the NIH-funded Human Reference Atlas — HRA Portal, EUI, RUI, ASCT+B Reporter, and more.',
+    stack: ['Angular', 'TypeScript', 'RxJS'],
   },
   {
-    accent: 'p-amber',
-    icon: '◈',
-    name: 'Backend & APIs',
-    desc: 'REST APIs, microservices, Spring Boot, secure auth flows, transactional databases.',
-    chips: ['Spring Boot', 'C#/.NET', 'Node.js', 'PostgreSQL', 'JWT', 'RAG / LLM'],
-    skills: [
-      { name: 'Node.js', pct: 88 },
-      { name: 'Spring Boot', pct: 82 },
-      { name: 'C# / .NET', pct: 82 },
-      { name: 'PostgreSQL / SQL', pct: 80 },
-      { name: 'RAG / LLM', pct: 72 },
-    ],
+    name: 'F1-Data-Analysis-Dashboard',
+    org: 'gauri2029/F1-Data-Analysis-Dashboard',
+    link: 'https://github.com/gauri2029/F1-Data-Analysis-Dashboard',
+    desc: 'Interactive Formula 1 analytics dashboard with Flask, Plotly, FastF1, and SQLite-backed data visualizations.',
+    stack: ['Python', 'Flask', 'Plotly'],
   },
   {
-    accent: 'p-green',
-    icon: '◎',
-    name: 'Cloud & DevOps',
-    desc: 'AWS, Azure, Docker, CI/CD pipelines, infrastructure as code, observability stacks.',
-    chips: ['AWS ECS', 'Docker', 'GitHub Actions', 'Azure DevOps', 'Terraform', 'Kubernetes'],
-    skills: [
-      { name: 'Docker', pct: 84 },
-      { name: 'CI/CD', pct: 88 },
-      { name: 'AWS ECS / Fargate', pct: 80 },
-      { name: 'Azure DevOps', pct: 78 },
-      { name: 'Kubernetes', pct: 68 },
-    ],
-  },
-  {
-    accent: 'p-pink',
-    icon: '⬢',
-    name: 'Testing & Quality',
-    desc: 'Full-stack coverage, accessibility auditing, E2E automation, CI-enforced quality gates.',
-    chips: ['Jest', 'React Testing Library', 'Selenium', 'NUnit', 'xUnit', 'WCAG'],
-    skills: [
-      { name: 'Jest / RTL', pct: 90 },
-      { name: 'Accessibility (WCAG)', pct: 85 },
-      { name: 'E2E (Selenium)', pct: 80 },
-      { name: 'NUnit / xUnit', pct: 82 },
-    ],
+    name: 'gauri2029.github.io',
+    org: 'gauri2029/gauri2029.github.io',
+    link: 'https://github.com/gauri2029/gauri2029.github.io',
+    desc: 'Source for this portfolio — Next.js App Router and Tailwind CSS, with a glassmorphism design system and Pro/Chaos modes.',
+    stack: ['Next.js', 'React', 'Tailwind CSS'],
   },
 ];
 
 const EDUCATION = [
-  {
-    school: 'Indiana University Bloomington',
-    degree: 'M.S. in Computer Science',
-    period: 'Expected Graduation: May 2026',
-    courses: ['Cloud Computing', 'Computer Networks', 'Software Engineering', 'Applied Algorithms', 'Applied Machine Learning'],
-  },
   {
     school: 'Savitribai Phule Pune University',
     degree: 'B.E. in Computer Engineering · Honors in Data Science & Machine Learning',
     period: 'May 2018 - May 2022',
     gpa: '3.8 / 4.0',
     courses: ['Data Structures', 'Algorithms', 'Database Systems', 'Operating Systems', 'Computer Networks', 'Artificial Intelligence', 'Machine Learning'],
+  },
+  {
+    school: 'Indiana University Bloomington',
+    degree: 'M.S. in Computer Science',
+    period: 'Aug 2024 - May 2026',
+    courses: ['Cloud Computing', 'Computer Networks', 'Software Engineering', 'Applied Algorithms', 'Applied Machine Learning'],
   },
 ];
 
@@ -282,7 +533,7 @@ const BOOT_LINES = [
   { text: '[MOD] wcag-a11y.ko', cls: 'purple' },
   { text: '[MOD] rag-pipeline.ko', cls: 'purple' },
   { text: '', cls: '' },
-  { text: '[WARN] new_grad=true ship_anyway=true', cls: 'red' },
+  { text: '[OK] experience=3yrs focus=frontend scope=full-stack+cloud', cls: 'green' },
   { text: '', cls: '' },
   { text: '$ exec portfolio --mode=impress', cls: 'bright' },
 ];
@@ -326,11 +577,11 @@ function BootScreen({ onComplete }) {
 // ── THEME TOGGLE ──────────────────────────────────────────────────────────────
 
 function ThemeToggle() {
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
-    const isDark = saved ? saved === 'dark' : true;
+    const isDark = saved ? saved === 'dark' : false;
     setDark(isDark);
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, []);
@@ -359,25 +610,22 @@ function Navbar({ mode, updateMode }) {
         fontFamily: 'var(--display)',
         fontSize: 18,
         fontWeight: 800,
-        background: 'linear-gradient(135deg, #7C5CFF, #22D3EE)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
         letterSpacing: '-0.02em',
-        filter: 'drop-shadow(0 0 8px rgba(124,92,255,0.4))',
+        filter: 'drop-shadow(0 0 8px rgba(139,92,246,0.4))',
       }}>GM</div>
       <ul className="nav-links">
         <li><a href="#experience">Experience</a></li>
         <li><a href="#projects">Projects</a></li>
-        <li><a href="#expertise">Expertise</a></li>
         <li><a href="#education">Education</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
       <div className="nav-right">
-        <div className="nav-status">
-          <div className="status-dot" />
-          Open to work
-        </div>
+        <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="nav-icon-link" aria-label="LinkedIn" title="LinkedIn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
+        </a>
+        <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="nav-icon-link" aria-label="GitHub" title="GitHub">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.19c0 4.49 2.87 8.3 6.84 9.65.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.88-2.78.6-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.9-.63.07-.62.07-.62 1 .07 1.53 1.04 1.53 1.04.89 1.55 2.34 1.1 2.91.84.09-.66.35-1.1.63-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.05a9.3 9.3 0 0 1 2.5-.35c.85 0 1.71.12 2.5.35 1.91-1.32 2.75-1.05 2.75-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.6.69.49A10.2 10.2 0 0 0 22 12.19C22 6.58 17.52 2 12 2z"/></svg>
+        </a>
         <ModeSwitcher mode={mode} updateMode={updateMode} />
         <ThemeToggle />
       </div>
@@ -399,37 +647,21 @@ function Hero() {
 
           {/* LEFT — text content */}
           <div className="hero-text">
-            <div className="hero-eyebrow">
-              <span className="hero-eyebrow-dot" />
-              new_grad=true · available=may_2026
-            </div>
-
             <h1 className="hero-name">
               Gauri
               <span className="hero-name-grad">Markandey.</span>
             </h1>
 
             <p className="hero-tagline">
-              Software engineer with <strong>2+ years in production</strong> -
-              building pixel-perfect UIs, design systems, and cloud-native backends
-              that handle real load.
+              <strong>Frontend-focused Software Engineer</strong> with <strong>3 years of professional experience</strong> across
+              full-stack and cloud-native systems - building pixel-perfect UIs, design systems, and production
+              infrastructure that handles real load.
             </p>
 
             <div className="hero-cta">
-              <a href="https://drive.google.com/file/d/18Sqk9BWoF2OWuwOGDjTkC_3rtmnv5JB6/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn btn-primary">View Resume →</a>
-              <a href="#contact" className="btn btn-ghost">Get in Touch</a>
+              <a href="#contact" className="btn btn-primary">Get in Touch</a>
               <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">LinkedIn ↗</a>
-            </div>
-
-            <div className="hero-meta">
-              <div className="hero-meta-item">
-                <span className="hero-meta-label">Currently</span>
-                <span className="hero-meta-value">M.S. CS · Indiana University</span>
-              </div>
-              <div className="hero-meta-item">
-                <span className="hero-meta-label">Looking for</span>
-                <span className="hero-meta-value">SWE roles · New Grad 2026</span>
-              </div>
+              <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">GitHub ↗</a>
             </div>
           </div>
 
@@ -437,6 +669,10 @@ function Hero() {
           <div className="hero-avatar-wrap">
             <div className="hero-avatar-glow" />
             <div className="hero-avatar-ring" />
+            <div className="hero-avatar-orbit" aria-hidden="true">
+              <span className="hero-avatar-orbit-dot dot-a" />
+              <span className="hero-avatar-orbit-dot dot-b" />
+            </div>
             <div className="hero-badge hero-badge-tl">React</div>
             <div className="hero-badge hero-badge-tr">Spring Boot</div>
             <div className="hero-badge hero-badge-bl">TypeScript</div>
@@ -456,6 +692,7 @@ function Hero() {
 function ExperienceCard({ exp }) {
   const [open, setOpen] = useState(false);
   const [swept, setSwept] = useState(false);
+  const bodyId = `exp-body-${exp.company.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
 
   const handleClick = () => {
     setOpen((o) => !o);
@@ -464,9 +701,9 @@ function ExperienceCard({ exp }) {
   };
 
   return (
-    <div className={`exp-card${open ? ' open' : ''}`}>
+    <div className={`exp-card timeline-card glass-card${open ? ' open' : ''}`}>
       {swept && <div className="sweep" />}
-      <div className="exp-header" onClick={handleClick}>
+      <button type="button" className="exp-header" onClick={handleClick} aria-expanded={open} aria-controls={bodyId}>
         <div>
           <div className="exp-role">{exp.role}</div>
           <div className="exp-company">{exp.company}</div>
@@ -475,9 +712,9 @@ function ExperienceCard({ exp }) {
             <span>{exp.location}</span>
           </div>
         </div>
-        <div className="exp-toggle">+</div>
-      </div>
-      <div className="exp-body-wrap">
+        <div className="exp-toggle" aria-hidden="true">+</div>
+      </button>
+      <div className="exp-body-wrap" id={bodyId}>
         <div className="exp-body-inner">
           <div className="exp-body">
             <div className="exp-stack">
@@ -497,20 +734,30 @@ function ExperienceCard({ exp }) {
 
 // ── PROJECT CARD ──────────────────────────────────────────────────────────────
 
-function ProjectCard({ proj }) {
+function ProjectCard({ proj, reverse }) {
   const [open, setOpen] = useState(false);
+  const tilt = useTilt();
+  const bodyId = `project-body-${proj.num}`;
   return (
-    <div className={`project-card${open ? ' open' : ''}`}>
-      <div className="project-header">
+    <div
+      className={`project-card-h glass-card tilt-card accent-${proj.accent}${reverse ? ' reverse' : ''}${open ? ' open' : ''}`}
+      onMouseMove={tilt.onMouseMove}
+      onMouseLeave={tilt.onMouseLeave}
+    >
+      <div className="project-card-image">
+        <img src={proj.image} alt={`${proj.name} preview`} loading="lazy" />
+        <div className="project-num">// {proj.num}</div>
+      </div>
+
+      <div className="project-card-content">
         <div className="project-top-row">
-          <div className="project-num">// {proj.num}</div>
+          <div className="project-name">{proj.name}</div>
           {proj.link && (
             <a href={proj.link} target="_blank" rel="noopener noreferrer" className="project-link-icon" title="View project">
               ↗
             </a>
           )}
         </div>
-        <div className="project-name">{proj.name}</div>
         <div className="project-desc">{proj.desc}</div>
         <div className="project-metrics">
           {proj.metrics.map((m) => (
@@ -520,27 +767,27 @@ function ProjectCard({ proj }) {
             </div>
           ))}
         </div>
-      </div>
 
-      <div className="project-expand-btn" onClick={() => setOpen((o) => !o)}>
-        <span>{open ? 'Collapse' : 'See details'}</span>
-        <span style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
-      </div>
+        <button type="button" className="project-expand-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={bodyId}>
+          <span>{open ? 'Collapse' : 'See details'}</span>
+          <span aria-hidden="true" style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
+        </button>
 
-      <div className="project-body-wrap">
-        <div className="project-body-inner">
-          <div className="project-body">
-            <div className="project-section-title">Problem</div>
-            <p>{proj.problem}</p>
-            <div className="project-section-title">Approach</div>
-            <p>{proj.approach}</p>
-            <div className="project-section-title">Impact</div>
-            <p>{proj.impact}</p>
-            <div className="project-section-title" style={{ marginTop: 16 }}>Stack</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-              {proj.stack.map((t) => <span key={t} className="tag cyan">{t}</span>)}
+        <div className="project-body-wrap" id={bodyId}>
+          <div className="project-body-inner">
+            <div className="project-body">
+              <div className="project-section-title">Problem</div>
+              <p>{proj.problem}</p>
+              <div className="project-section-title">Approach</div>
+              <p>{proj.approach}</p>
+              <div className="project-section-title">Impact</div>
+              <p>{proj.impact}</p>
+              <div className="project-section-title" style={{ marginTop: 16 }}>Stack</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                {proj.stack.map((t) => <span key={t} className="tag cyan">{t}</span>)}
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{proj.period}</div>
             </div>
-            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{proj.period}</div>
           </div>
         </div>
       </div>
@@ -548,48 +795,29 @@ function ProjectCard({ proj }) {
   );
 }
 
-// ── EXPERTISE CARD ────────────────────────────────────────────────────────────
+// ── PINNED REPO CARD ──────────────────────────────────────────────────────────
 
-function ExpertiseCard({ card }) {
-  const [swept, setSwept] = useState(false);
-  const [animated, setAnimated] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setAnimated(true); },
-      { threshold: 0.2 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const handleClick = () => {
-    setSwept(true);
-    setTimeout(() => setSwept(false), 550);
-  };
-
+function PinnedCard({ repo }) {
+  const tilt = useTilt();
   return (
-    <div ref={ref} className={`expertise-card ${card.accent}`} onClick={handleClick}>
-      {swept && <div className="sweep" />}
-      <span className="expertise-icon">{card.icon}</span>
-      <div className="expertise-name">{card.name}</div>
-      <div className="expertise-desc">{card.desc}</div>
-      <div className="skill-chips">
-        {card.chips.map((c) => <span key={c} className="skill-chip">{c}</span>)}
+    <a
+      href={repo.link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="pinned-card glass-card tilt-card"
+      onMouseMove={tilt.onMouseMove}
+      onMouseLeave={tilt.onMouseLeave}
+    >
+      <div className="pinned-top-row">
+        <span className="pinned-org">{repo.org}</span>
+        <span className="pinned-link-icon" aria-hidden="true">↗</span>
       </div>
-      <div className="skill-bars">
-        {card.skills.map((s) => (
-          <div key={s.name} className="skill-bar-item">
-            <span className="skill-bar-name">{s.name}</span>
-            <div className="skill-bar-track">
-              <div className="skill-bar-fill" style={{ width: animated ? `${s.pct}%` : '0%' }} />
-            </div>
-            <span className="skill-bar-pct">{s.pct}%</span>
-          </div>
-        ))}
+      <div className="pinned-name">{repo.name}</div>
+      <p className="pinned-desc">{repo.desc}</p>
+      <div className="pinned-stack">
+        {repo.stack.map((t) => <span key={t} className="tag">{t}</span>)}
       </div>
-    </div>
+    </a>
   );
 }
 
@@ -597,7 +825,7 @@ function ExpertiseCard({ card }) {
 
 function EducationCard({ edu }) {
   return (
-    <div className="edu-card">
+    <div className="edu-card timeline-card glass-card">
       <div className="edu-card-accent" />
       <div className="edu-school">{edu.school}</div>
       <div className="edu-degree">{edu.degree}</div>
@@ -621,13 +849,52 @@ function EducationCard({ edu }) {
 
 function useFadeUp() {
   useEffect(() => {
-    const els = document.querySelectorAll('.fade-up');
+    const els = Array.from(document.querySelectorAll('.fade-up, .slide-left, .slide-right'));
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-      { threshold: 0.07 }
+      { threshold: 0.07, rootMargin: '0px 0px -5% 0px' }
     );
     els.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+
+    // Redundant safety net, in case the observer misbehaves: on scroll/resize
+    // (rAF-throttled), reveal anything that's actually near the viewport.
+    // This deliberately does NOT reveal things that are still far below the
+    // fold — a blanket timer that reveals everything a couple seconds after
+    // mount defeats the entire point of a scroll-triggered animation, since
+    // most visitors haven't scrolled that far yet.
+    let ticking = false;
+    const revealNearViewport = () => {
+      ticking = false;
+      const vh = window.innerHeight;
+      els.forEach((el) => {
+        if (el.classList.contains('visible')) return;
+        const r = el.getBoundingClientRect();
+        if (r.top < vh * 1.15 && r.bottom > -vh * 0.15) el.classList.add('visible');
+      });
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(revealNearViewport);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    revealNearViewport();
+
+    // True last resort — only matters if both the observer and the scroll
+    // listener above have failed (e.g. very old browser), so it's set long
+    // enough that it won't spoil the reveal for anyone actually scrolling
+    // at a normal pace.
+    const hardFallback = setTimeout(() => {
+      els.forEach((el) => el.classList.add('visible'));
+    }, 15000);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      clearTimeout(hardFallback);
+    };
   }, []);
 }
 
@@ -652,93 +919,71 @@ export default function Page() {
     <>
       <BootScreen onComplete={handleBootComplete} />
 
-      <div style={{ opacity: booted ? 1 : 0, transition: 'opacity 0.9s ease' }}>
+      <div className={booted ? 'is-booted' : ''} style={{ opacity: booted ? 1 : 0, transition: 'opacity 0.4s ease' }}>
 
         <div className={`mode-flash${flash ? ' active' : ''}`} aria-hidden="true" />
 
-        <MotionLayer />
+        <MotionLayer booted={booted} />
         <Navbar mode={mode} updateMode={handleModeChange} />
         <main>
           <Hero />
-
-          <hr className="section-divider" />
 
           {/* EXPERIENCE */}
           <section id="experience" className="section" style={{ position: 'relative' }}>
             <div className="section-glow section-glow-purple" />
             <div className="section-label fade-up">01</div>
-            <h2 className="section-title fade-up">Work Experience</h2>
+            <h2 className="section-title slide-left">Work Experience</h2>
             <div className="timeline" style={{ paddingLeft: 4 }}>
               {EXPERIENCE.map((exp, i) => (
-                <div key={exp.company} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
+                <div key={exp.company} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.18}s` }}>
                   <ExperienceCard exp={exp} />
                 </div>
               ))}
             </div>
           </section>
 
-          <hr className="section-divider" />
-
           {/* PROJECTS */}
           <section id="projects" className="section" style={{ position: 'relative' }}>
             <div className="section-glow section-glow-cyan" />
             <div className="section-label fade-up">02</div>
-            <h2 className="section-title fade-up">Projects</h2>
-            <div className="projects-grid">
+            <h2 className="section-title slide-left">Projects</h2>
+            <div className="projects-list">
               {PROJECTS.map((p, i) => (
-                <div key={p.num} className="fade-up" style={{ transitionDelay: `${i * 0.09}s` }}>
-                  <ProjectCard proj={p} />
+                <div key={p.num} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.16}s` }}>
+                  <ProjectCard proj={p} reverse={i % 2 === 1} />
+                </div>
+              ))}
+            </div>
+
+            <h3 className="subsection-title fade-up">More on GitHub</h3>
+            <div className="pinned-grid">
+              {PINNED_REPOS.map((repo, i) => (
+                <div key={repo.org} className="fade-up" style={{ transitionDelay: `${i * 0.12}s` }}>
+                  <PinnedCard repo={repo} />
                 </div>
               ))}
             </div>
           </section>
-
-          <hr className="section-divider" />
-
-          {/* EXPERTISE */}
-          <section id="expertise" className="section" style={{ position: 'relative' }}>
-            <div className="section-glow section-glow-purple" />
-            <div className="section-label fade-up">03</div>
-            <h2 className="section-title fade-up">Technical Expertise</h2>
-            <div className="expertise-grid">
-              {EXPERTISE.map((card, i) => (
-                <div key={card.name} className="fade-up" style={{ transitionDelay: `${i * 0.07}s` }}>
-                  <ExpertiseCard card={card} />
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <hr className="section-divider" />
 
           {/* EDUCATION */}
           <section id="education" className="section">
-            <div className="section-label fade-up">04</div>
-            <h2 className="section-title fade-up">Education</h2>
-            <div className="edu-grid">
+            <div className="section-label fade-up">03</div>
+            <h2 className="section-title slide-left">Education</h2>
+            <div className="timeline" style={{ paddingLeft: 4 }}>
               {EDUCATION.map((e, i) => (
-                <div key={e.school} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
+                <div key={e.school} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.18}s` }}>
                   <EducationCard edu={e} />
                 </div>
               ))}
             </div>
           </section>
 
-          <hr className="section-divider" />
-
           {/* CONTACT */}
           <section id="contact">
             <div className="contact-section">
-              <h2 className="contact-title fade-up">
-                Let's ship<br /><span>something real.</span>
-              </h2>
-              <p className="contact-sub fade-up">
-                Graduating May 2026, available now. Looking for full-stack, frontend, or backend SWE roles where the work actually matters.
-              </p>
+              <h2 className="contact-title fade-up">Let's connect</h2>
               <div className="contact-links fade-up">
                 <a href="mailto:gauri2029@gmail.com" className="contact-link">✉ gauri2029@gmail.com</a>
-                <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="contact-link">↗ LinkedIn</a>
-                <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="contact-link">⌥ GitHub</a>
               </div>
             </div>
           </section>
