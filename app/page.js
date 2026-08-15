@@ -156,14 +156,14 @@ function StarField({ booted }) {
     let wasBooted = bootedRef.current;
     let lastTrailAt = 0;
     const pointer = { x: -9999, y: -9999, active: false };
-    const STAR_COUNT = 170;
+    const STAR_COUNT = 150;
     // A second, static layer spread evenly across the whole canvas. The
     // hyperspace stars above use a perspective projection that naturally
     // clusters near the vanishing point (center) — most of a star's life is
     // spent at large z, which projects close to center — so on its own it
     // reads as "stars in the middle, empty at the edges". This layer fixes
     // that by covering corners/sides uniformly, independent of the drift.
-    const FIELD_STAR_COUNT = 110;
+    const FIELD_STAR_COUNT = 100;
     const BOOT_SPEED = 0.2;
     const BASE_SPEED = 1.6;
     const MAX_BURST = 90;
@@ -395,19 +395,6 @@ function MotionLayer({ booted }) {
 
 const EXPERIENCE = [
   {
-    role: 'Software Engineer',
-    company: 'Tietoevry India Pvt. Ltd.',
-    location: 'Pune, India',
-    period: 'Jul 2022 - Jun 2024',
-    stack: ['React', 'C#', '.NET', 'Node.js', 'Docker', 'Azure', 'Storybook', 'Selenium'],
-    bullets: [
-      '<strong>Extended and migrated</strong> healthcare frontend modules from Angular to React, building reusable component libraries in Storybook aligned with Figma designs, cutting frontend development effort ~35%.',
-      '<strong>Developed and maintained</strong> full-stack features using Node.js and C#/.NET REST APIs with SQL Server, enforcing input validation, secure auth flows, and API access controls in a regulated healthcare environment.',
-      '<strong>Maintained ~80%+ code coverage</strong> across unit, integration, and E2E layers using Jest, React Testing Library, Selenium, NUnit, and xUnit.',
-      '<strong>Built CI/CD pipelines</strong> with Azure DevOps and Docker, automating deployments and reducing production incidents ~35% within an agile delivery workflow.',
-    ],
-  },
-  {
     role: 'Software Developer',
     company: 'Cyberinfrastructure for Network Science Center (CNS)',
     location: 'Bloomington, IN',
@@ -420,6 +407,19 @@ const EXPERIENCE = [
       '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted developer tools to accelerate iteration and delivery, reducing build and release friction ~25%.',
     ],
   },
+  {
+    role: 'Software Engineer',
+    company: 'Tietoevry India Pvt. Ltd.',
+    location: 'Pune, India',
+    period: 'Jul 2022 - Jun 2024',
+    stack: ['React', 'C#', '.NET', 'Node.js', 'Docker', 'Azure', 'Storybook', 'Selenium'],
+    bullets: [
+      '<strong>Extended and migrated</strong> healthcare frontend modules from Angular to React, building reusable component libraries in Storybook aligned with Figma designs, cutting frontend development effort ~35%.',
+      '<strong>Developed and maintained</strong> full-stack features using Node.js and C#/.NET REST APIs with SQL Server, enforcing input validation, secure auth flows, and API access controls in a regulated healthcare environment.',
+      '<strong>Maintained ~80%+ code coverage</strong> across unit, integration, and E2E layers using Jest, React Testing Library, Selenium, NUnit, and xUnit.',
+      '<strong>Built CI/CD pipelines</strong> with Azure DevOps and Docker, automating deployments and reducing production incidents ~35% within an agile delivery workflow.',
+    ],
+  },
 ];
 
 const PROJECTS = [
@@ -427,10 +427,10 @@ const PROJECTS = [
     num: '01',
     name: 'DocuQuery',
     link: 'https://github.com/gauri2029/docuquery',
-    image: 'https://loremflickr.com/640/480/artificialintelligence,circuitboard?lock=101',
+    image: './rag-photo.png',
     accent: 'cobalt',
     tagline: 'AI-powered documentation assistant for developers',
-    desc: 'A secure, self-hosted assistant that lets developers query internal docs in plain English and get source-cited answers instantly — built to keep sensitive documentation off third-party servers.',
+    desc: 'Think ChatGPT for your documents, but built for trust: document-scoped retrieval, source-cited answers, evidence tracing, and built-in observability so you can see how the system performs..',
     metrics: [
       { val: 'P95', label: 'sub-second latency' },
       { val: '5', label: 'orchestrated services' },
@@ -445,10 +445,10 @@ const PROJECTS = [
     num: '02',
     name: 'Degree Flowchart',
     link: 'https://github.com/degree-flowchart',
-    image: 'https://loremflickr.com/640/480/graduation,university?lock=102',
+    image: './degree-flowchart.jpg',
     accent: 'coral',
     tagline: 'Cloud-native degree planning with Angular and Spring Boot microservices',
-    desc: 'A distributed degree planning platform with a dynamic Angular UI, OAuth-based authentication via Keycloak, schedule exports, and a microservices backend built to scale under real load.',
+    desc: 'A cloud-native, distributed degree planner that helps students turn messy course requirements into a clear path to graduation, built with Angular and Spring Boot and load-tested with k6 for real-world scale.',
     metrics: [
       { val: '245ms', label: 'median response (k6)' },
       { val: '100k+', label: 'requests load tested' },
@@ -463,10 +463,10 @@ const PROJECTS = [
     num: '03',
     name: 'IUCAT Library System',
     link: 'https://iucat-library.onrender.com',
-    image: 'https://loremflickr.com/640/480/library,bookshelf?lock=103',
+    image: './iucat.jpg',
     accent: 'amber',
     tagline: 'Fully deployed library system - live on AWS ECS and Render',
-    desc: 'A production-deployed library platform with book rentals, holds queue, AJAX search, and full observability - not just a backend exercise.',
+    desc: 'A cloud-deployed library platform built with JavaScript and Spring Boot that makes finding, borrowing, and managing books fast and seamless, with automated workflows, production monitoring, and k6-tested performance at 75 ms average latency.',
     metrics: [
       { val: '75ms', label: 'avg response (k6)' },
       { val: '100%', label: 'success rate under load' },
@@ -484,21 +484,21 @@ const PINNED_REPOS = [
     name: 'hra-ui',
     org: 'hubmapconsortium/hra-ui',
     link: 'https://github.com/hubmapconsortium/hra-ui',
-    desc: 'HRA UIs monorepo powering the NIH-funded Human Reference Atlas — HRA Portal, EUI, RUI, ASCT+B Reporter, and more.',
+    desc: 'A large-scale Angular + TypeScript UI platform powering the NIH-funded Human Reference Atlas, helping researchers explore and interact with complex biomedical data.',
     stack: ['Angular', 'TypeScript', 'RxJS'],
   },
   {
     name: 'F1-Data-Analysis-Dashboard',
     org: 'gauri2029/F1-Data-Analysis-Dashboard',
     link: 'https://github.com/gauri2029/F1-Data-Analysis-Dashboard',
-    desc: 'Interactive Formula 1 analytics dashboard with Flask, Plotly, FastF1, and SQLite-backed data visualizations.',
+    desc: 'A Formula 1 analytics dashboard built with Python, Flask, and Plotly that turns race telemetry into interactive insights on pace, strategy, qualifying, and performance.',
     stack: ['Python', 'Flask', 'Plotly'],
   },
   {
     name: 'gauri2029.github.io',
     org: 'gauri2029/gauri2029.github.io',
     link: 'https://github.com/gauri2029/gauri2029.github.io',
-    desc: 'Source for this portfolio — Next.js App Router and Tailwind CSS, with a glassmorphism design system and Pro/Chaos modes.',
+    desc: 'A modern Next.js + React portfolio built to showcase my work with polished interactions, responsive design, and a playful Pro/Chaos experience.',
     stack: ['Next.js', 'React', 'Tailwind CSS'],
   },
 ];
@@ -544,23 +544,23 @@ const SKILL_CATEGORIES = [
 
 // Strongest/most-used technologies — rendered as emphasized pills.
 const CORE_SKILLS = new Set([
-  'TypeScript', 'JavaScript', 'React', 'Next.js', 'Angular',
-  'Node.js', 'AWS', 'Docker', 'PostgreSQL', 'LLM Integration',
+  'TypeScript', 'JavaScript', 'Python', 'React', 'Next.js', 'Angular',
+  'Node.js', 'Spring Boot', 'AWS', 'Docker', 'PostgreSQL', 'LLM Integration',
 ]);
 
 const EDUCATION = [
+  {
+    school: 'Indiana University Bloomington',
+    degree: 'M.S. in Computer Science',
+    period: 'Aug 2024 - May 2026',
+    courses: ['Cloud Computing', 'Computer Networks', 'Software Engineering', 'Applied Algorithms', 'Applied Machine Learning'],
+  },
   {
     school: 'Savitribai Phule Pune University',
     degree: 'B.E. in Computer Engineering · Honors in Data Science & Machine Learning',
     period: 'May 2018 - May 2022',
     gpa: '3.8 / 4.0',
     courses: ['Data Structures', 'Algorithms', 'Database Systems', 'Operating Systems', 'Computer Networks', 'Artificial Intelligence', 'Machine Learning'],
-  },
-  {
-    school: 'Indiana University Bloomington',
-    degree: 'M.S. in Computer Science',
-    period: 'Aug 2024 - May 2026',
-    courses: ['Cloud Computing', 'Computer Networks', 'Software Engineering', 'Applied Algorithms', 'Applied Machine Learning'],
   },
 ];
 
@@ -578,7 +578,7 @@ const BOOT_LINES = [
   { text: '[MOD] wcag-a11y.ko', cls: 'purple' },
   { text: '[MOD] rag-pipeline.ko', cls: 'purple' },
   { text: '', cls: '' },
-  { text: '[OK] experience=3yrs focus=frontend scope=full-stack+cloud', cls: 'green' },
+  { text: '[OK] experience=2+yrs focus=frontend scope=full-stack+cloud', cls: 'green' },
   { text: '', cls: '' },
   { text: '$ exec portfolio --mode=impress', cls: 'bright' },
 ];
@@ -690,24 +690,40 @@ function Hero() {
 
       <div className="hero-inner">
         <div className="hero-layout">
-
           {/* LEFT — text content */}
           <div className="hero-text">
             <h1 className="hero-name">
               Gauri
-              <span className="hero-name-grad">Markandey.</span>
+              <span className="hero-name-grad">Markandey</span>
             </h1>
 
             <p className="hero-tagline">
-              <strong>Frontend-focused Software Engineer</strong> with <strong>3 years of professional experience</strong> across
-              full-stack and cloud-native systems - building pixel-perfect UIs, design systems, and production
-              infrastructure that handles real load.
+              <strong>Frontend-focused Software Engineer</strong> with{" "}
+              <strong>2+ years of experience</strong> building polished user
+              interfaces, scalable full-stack applications, and reliable
+              cloud-native systems.
             </p>
 
             <div className="hero-cta">
-              <a href="#contact" className="btn btn-primary">Get in Touch</a>
-              <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">LinkedIn ↗</a>
-              <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">GitHub ↗</a>
+              <a href="#contact" className="btn btn-primary">
+                Get in Touch
+              </a>
+              <a
+                href="https://linkedin.com/in/gaurimarkandey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+              >
+                LinkedIn ↗
+              </a>
+              <a
+                href="https://github.com/gauri2029"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+              >
+                GitHub ↗
+              </a>
             </div>
           </div>
 
@@ -723,9 +739,12 @@ function Hero() {
             <div className="hero-badge hero-badge-tr">Spring Boot</div>
             <div className="hero-badge hero-badge-bl">TypeScript</div>
             <div className="hero-badge hero-badge-br">AWS</div>
-            <img src="/avatar.png" alt="Gauri Markandey - software engineer" className="hero-avatar-img" />
+            <img
+              src="/avatar.png"
+              alt="Gauri Markandey - software engineer"
+              className="hero-avatar-img"
+            />
           </div>
-
         </div>
       </div>
     </section>
