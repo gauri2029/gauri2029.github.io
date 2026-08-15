@@ -44,10 +44,10 @@
   --sans:        'Inter', sans-serif;
   --display:     'Syne', sans-serif;
   --comic:       'Bangers', var(--display);
-  --r-sm:        8px;
-  --r-md:        12px;
-  --r-lg:        16px;
-  --r-xl:        24px;
+  --r-sm:        10px;
+  --r-md:        14px;
+  --r-lg:        20px;
+  --r-xl:        28px;
   --shadow-glow: 0 0 24px rgba(76,141,255,0.22);
   --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
 
@@ -207,8 +207,8 @@ a, button {
   padding: 0 2rem; height: 60px;
   display: flex; align-items: center; justify-content: space-between;
   background: var(--glass-bg-solid);
-  border-bottom: 1px solid var(--glass-border);
-  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+  box-shadow: 0 1px 24px rgba(2,6,20,0.06);
+  transition: background 0.3s, box-shadow 0.3s;
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .navbar {
@@ -294,11 +294,11 @@ main { padding-top: 60px; }
 }
 
 .section-title {
-  font-family: var(--display);
-  font-size: clamp(28px, 3.5vw, 42px);
-  font-weight: 800; color: var(--text);
+  font-family: var(--comic);
+  font-size: clamp(30px, 3.8vw, 46px);
+  font-weight: 400; color: var(--text);
   margin-bottom: 24px; line-height: 1.1;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.01em;
 }
 
 .subsection-title {
@@ -310,8 +310,9 @@ main { padding-top: 60px; }
 
 .section-divider {
   border: none;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border2), transparent);
+  height: 40px;
+  background: radial-gradient(ellipse 60% 100% at center, rgba(76,141,255,0.08), transparent 75%);
+  filter: blur(6px);
   margin: 0;
 }
 
@@ -624,8 +625,9 @@ main { padding-top: 60px; }
   letter-spacing: 0.1em;
 }
 .project-name {
-  font-family: var(--display); font-size: 22px; font-weight: 800;
+  font-family: var(--comic); font-size: 26px; font-weight: 400;
   color: var(--text); margin-bottom: 6px; line-height: 1.2;
+  letter-spacing: 0.01em;
 }
 .project-desc { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 14px; }
 
@@ -1083,8 +1085,7 @@ body::after {
 
 /* ── NAV SCROLL BLUR ENHANCEMENT ── */
 .navbar.scrolled {
-  border-bottom-color: var(--glass-border-hover);
-  box-shadow: 0 1px 32px rgba(0,0,0,0.35);
+  box-shadow: 0 1px 32px rgba(0,0,0,0.16);
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
   .navbar.scrolled { background: var(--glass-bg-strong); }
@@ -1094,18 +1095,6 @@ body::after {
   box-shadow: 0 1px 32px rgba(0,0,0,0.08);
 }
 
-
-/* ── SECTION DIVIDER SHIMMER ── */
-.section-divider {
-  background: linear-gradient(90deg, transparent, var(--border2), var(--primary), var(--border2), transparent);
-  background-size: 200% 100%;
-  animation: dividerShimmer 6s linear infinite;
-}
-
-@keyframes dividerShimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
 
 /* ── CONTACT SECTION GLOW ── */
 .contact-section::before {
@@ -1213,6 +1202,12 @@ body::after {
   object-fit: cover;
   object-position: center top;
   z-index: 2;
+  transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-avatar-wrap:hover .hero-avatar-img { transform: scale(1.06) rotate(-1deg); }
+  .hero-avatar-wrap:hover .hero-avatar-glow { animation-duration: 3s; filter: blur(28px); }
 }
 
 /* floating skill badges */

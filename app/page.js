@@ -277,7 +277,7 @@ const PROJECTS = [
     num: '01',
     name: 'DocuQuery',
     link: 'https://github.com/gauri2029/docuquery',
-    image: 'https://loremflickr.com/640/480/artificialintelligence,circuitboard',
+    image: 'https://loremflickr.com/640/480/artificialintelligence,circuitboard?lock=101',
     accent: 'cobalt',
     tagline: 'AI-powered documentation assistant for developers',
     desc: 'A secure, self-hosted assistant that lets developers query internal docs in plain English and get source-cited answers instantly — built to keep sensitive documentation off third-party servers.',
@@ -295,7 +295,7 @@ const PROJECTS = [
     num: '02',
     name: 'Degree Flowchart',
     link: 'https://github.com/degree-flowchart',
-    image: 'https://loremflickr.com/640/480/graduation,university',
+    image: 'https://loremflickr.com/640/480/graduation,university?lock=102',
     accent: 'coral',
     tagline: 'Cloud-native degree planning with Angular and Spring Boot microservices',
     desc: 'A distributed degree planning platform with a dynamic Angular UI, OAuth-based authentication via Keycloak, schedule exports, and a microservices backend built to scale under real load.',
@@ -313,7 +313,7 @@ const PROJECTS = [
     num: '03',
     name: 'IUCAT Library System',
     link: 'https://iucat-library.onrender.com',
-    image: 'https://loremflickr.com/640/480/library,bookshelf',
+    image: 'https://loremflickr.com/640/480/library,bookshelf?lock=103',
     accent: 'amber',
     tagline: 'Fully deployed library system - live on AWS ECS and Render',
     desc: 'A production-deployed library platform with book rentals, holds queue, AJAX search, and full observability - not just a backend exercise.',
@@ -763,7 +763,7 @@ export default function Page() {
             <h2 className="section-title slide-left">Work Experience</h2>
             <div className="timeline" style={{ paddingLeft: 4 }}>
               {EXPERIENCE.map((exp, i) => (
-                <div key={exp.company} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
+                <div key={exp.company} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.1}s` }}>
                   <ExperienceCard exp={exp} />
                 </div>
               ))}
@@ -803,7 +803,7 @@ export default function Page() {
             <h2 className="section-title slide-left">Education</h2>
             <div className="timeline" style={{ paddingLeft: 4 }}>
               {EDUCATION.map((e, i) => (
-                <div key={e.school} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
+                <div key={e.school} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.1}s` }}>
                   <EducationCard edu={e} />
                 </div>
               ))}
