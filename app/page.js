@@ -38,15 +38,58 @@ function ModeSwitcher({ mode, updateMode }) {
       {modes.map((m) => (
         <button
           key={m.id}
+          type="button"
           className={`mode-btn${mode === m.id ? ' active' : ''}`}
           onClick={() => updateMode(m.id)}
           title={m.title}
+          aria-pressed={mode === m.id}
         >
           {m.label}
         </button>
       ))}
     </div>
   );
+}
+
+// ── TILT HOOK ─────────────────────────────────────────────────────────────────
+// Tracks pointer position over a card and exposes it as CSS custom properties
+// so hover-capable, non-touch pointers get a live tilt + light-reflection
+// response. On touch devices, or when the browser can't hover, or when the
+// user prefers reduced motion, this is a no-op and cards fall back to the
+// static CSS hover transform.
+
+function useTilt() {
+  const capable = useRef(null);
+
+  const isCapable = () => {
+    if (capable.current === null) {
+      capable.current =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+    return capable.current;
+  };
+
+  const onMouseMove = useCallback((e) => {
+    if (!isCapable()) return;
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    el.style.setProperty('--tilt-x', `${((py - 0.5) * -6).toFixed(2)}deg`);
+    el.style.setProperty('--tilt-y', `${((px - 0.5) * 8).toFixed(2)}deg`);
+    el.style.setProperty('--glow-x', `${(px * 100).toFixed(1)}%`);
+    el.style.setProperty('--glow-y', `${(py * 100).toFixed(1)}%`);
+  }, []);
+
+  const onMouseLeave = useCallback((e) => {
+    const el = e.currentTarget;
+    el.style.removeProperty('--tilt-x');
+    el.style.removeProperty('--tilt-y');
+  }, []);
+
+  return { onMouseMove, onMouseLeave };
 }
 
 // ── MOTION LAYER ──────────────────────────────────────────────────────────────
@@ -57,16 +100,21 @@ function MotionLayer() {
   const raf = useRef(null);
 
   useEffect(() => {
-    const onMove = (e) => { pos.current = { x: e.clientX, y: e.clientY }; };
-    const tick = () => {
-      if (cursorRef.current) {
-        cursorRef.current.style.left = pos.current.x + 'px';
-        cursorRef.current.style.top = pos.current.y + 'px';
-      }
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    let onMove;
+    if (canHover) {
+      onMove = (e) => { pos.current = { x: e.clientX, y: e.clientY }; };
+      const tick = () => {
+        if (cursorRef.current) {
+          cursorRef.current.style.left = pos.current.x + 'px';
+          cursorRef.current.style.top = pos.current.y + 'px';
+        }
+        raf.current = requestAnimationFrame(tick);
+      };
+      window.addEventListener('mousemove', onMove, { passive: true });
       raf.current = requestAnimationFrame(tick);
-    };
-    window.addEventListener('mousemove', onMove, { passive: true });
-    raf.current = requestAnimationFrame(tick);
+    }
 
     const navbar = document.querySelector('.navbar');
     const onScroll = () => {
@@ -97,10 +145,10 @@ function MotionLayer() {
     glows.forEach((g) => glowObserver.observe(g));
 
     return () => {
-      window.removeEventListener('mousemove', onMove);
+      if (onMove) window.removeEventListener('mousemove', onMove);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('scroll', onParallax);
-      cancelAnimationFrame(raf.current);
+      if (raf.current) cancelAnimationFrame(raf.current);
       glowObserver.disconnect();
     };
   }, []);
@@ -195,60 +243,27 @@ const PROJECTS = [
   },
 ];
 
-const EXPERTISE = [
+const PINNED_REPOS = [
   {
-    accent: 'p-cyan',
-    icon: '⬡',
-    name: 'Frontend Engineering',
-    desc: 'Design systems, component architecture, performance optimization, WCAG accessibility.',
-    chips: ['React', 'Angular', 'Next.js', 'TypeScript', 'RxJS', 'Storybook'],
-    skills: [
-      { name: 'React / Next.js', pct: 95 },
-      { name: 'Angular / RxJS', pct: 90 },
-      { name: 'TypeScript', pct: 90 },
-      { name: 'Design Systems', pct: 85 },
-    ],
+    name: 'hra-ui',
+    org: 'hubmapconsortium/hra-ui',
+    link: 'https://github.com/hubmapconsortium/hra-ui',
+    desc: 'HRA UIs monorepo powering the NIH-funded Human Reference Atlas — HRA Portal, EUI, RUI, ASCT+B Reporter, and more.',
+    stack: ['Angular', 'TypeScript', 'RxJS'],
   },
   {
-    accent: 'p-amber',
-    icon: '◈',
-    name: 'Backend & APIs',
-    desc: 'REST APIs, microservices, Spring Boot, secure auth flows, transactional databases.',
-    chips: ['Spring Boot', 'C#/.NET', 'Node.js', 'PostgreSQL', 'JWT', 'RAG / LLM'],
-    skills: [
-      { name: 'Node.js', pct: 88 },
-      { name: 'Spring Boot', pct: 82 },
-      { name: 'C# / .NET', pct: 82 },
-      { name: 'PostgreSQL / SQL', pct: 80 },
-      { name: 'RAG / LLM', pct: 72 },
-    ],
+    name: 'F1-Data-Analysis-Dashboard',
+    org: 'gauri2029/F1-Data-Analysis-Dashboard',
+    link: 'https://github.com/gauri2029/F1-Data-Analysis-Dashboard',
+    desc: 'Interactive Formula 1 analytics dashboard with Flask, Plotly, FastF1, and SQLite-backed data visualizations.',
+    stack: ['Python', 'Flask', 'Plotly'],
   },
   {
-    accent: 'p-green',
-    icon: '◎',
-    name: 'Cloud & DevOps',
-    desc: 'AWS, Azure, Docker, CI/CD pipelines, infrastructure as code, observability stacks.',
-    chips: ['AWS ECS', 'Docker', 'GitHub Actions', 'Azure DevOps', 'Terraform', 'Kubernetes'],
-    skills: [
-      { name: 'Docker', pct: 84 },
-      { name: 'CI/CD', pct: 88 },
-      { name: 'AWS ECS / Fargate', pct: 80 },
-      { name: 'Azure DevOps', pct: 78 },
-      { name: 'Kubernetes', pct: 68 },
-    ],
-  },
-  {
-    accent: 'p-pink',
-    icon: '⬢',
-    name: 'Testing & Quality',
-    desc: 'Full-stack coverage, accessibility auditing, E2E automation, CI-enforced quality gates.',
-    chips: ['Jest', 'React Testing Library', 'Selenium', 'NUnit', 'xUnit', 'WCAG'],
-    skills: [
-      { name: 'Jest / RTL', pct: 90 },
-      { name: 'Accessibility (WCAG)', pct: 85 },
-      { name: 'E2E (Selenium)', pct: 80 },
-      { name: 'NUnit / xUnit', pct: 82 },
-    ],
+    name: 'gauri2029.github.io',
+    org: 'gauri2029/gauri2029.github.io',
+    link: 'https://github.com/gauri2029/gauri2029.github.io',
+    desc: 'Source for this portfolio — Next.js App Router and Tailwind CSS, with a glassmorphism design system and Pro/Chaos modes.',
+    stack: ['Next.js', 'React', 'Tailwind CSS'],
   },
 ];
 
@@ -256,7 +271,7 @@ const EDUCATION = [
   {
     school: 'Indiana University Bloomington',
     degree: 'M.S. in Computer Science',
-    period: 'Expected Graduation: May 2026',
+    period: 'Aug 2024 - May 2026',
     courses: ['Cloud Computing', 'Computer Networks', 'Software Engineering', 'Applied Algorithms', 'Applied Machine Learning'],
   },
   {
@@ -282,7 +297,7 @@ const BOOT_LINES = [
   { text: '[MOD] wcag-a11y.ko', cls: 'purple' },
   { text: '[MOD] rag-pipeline.ko', cls: 'purple' },
   { text: '', cls: '' },
-  { text: '[WARN] new_grad=true ship_anyway=true', cls: 'red' },
+  { text: '[OK] experience=3yrs focus=frontend scope=full-stack+cloud', cls: 'green' },
   { text: '', cls: '' },
   { text: '$ exec portfolio --mode=impress', cls: 'bright' },
 ];
@@ -359,17 +374,12 @@ function Navbar({ mode, updateMode }) {
         fontFamily: 'var(--display)',
         fontSize: 18,
         fontWeight: 800,
-        background: 'linear-gradient(135deg, #7C5CFF, #22D3EE)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
         letterSpacing: '-0.02em',
-        filter: 'drop-shadow(0 0 8px rgba(124,92,255,0.4))',
+        filter: 'drop-shadow(0 0 8px rgba(76,141,255,0.4))',
       }}>GM</div>
       <ul className="nav-links">
         <li><a href="#experience">Experience</a></li>
         <li><a href="#projects">Projects</a></li>
-        <li><a href="#expertise">Expertise</a></li>
         <li><a href="#education">Education</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
@@ -401,7 +411,7 @@ function Hero() {
           <div className="hero-text">
             <div className="hero-eyebrow">
               <span className="hero-eyebrow-dot" />
-              new_grad=true · available=may_2026
+              exp=3yrs · focus=frontend · scope=full-stack+cloud
             </div>
 
             <h1 className="hero-name">
@@ -410,9 +420,9 @@ function Hero() {
             </h1>
 
             <p className="hero-tagline">
-              Software engineer with <strong>2+ years in production</strong> -
-              building pixel-perfect UIs, design systems, and cloud-native backends
-              that handle real load.
+              <strong>Frontend-focused Software Engineer</strong> with <strong>3 years of professional experience</strong> across
+              full-stack and cloud-native systems - building pixel-perfect UIs, design systems, and production
+              infrastructure that handles real load.
             </p>
 
             <div className="hero-cta">
@@ -423,12 +433,12 @@ function Hero() {
 
             <div className="hero-meta">
               <div className="hero-meta-item">
-                <span className="hero-meta-label">Currently</span>
-                <span className="hero-meta-value">M.S. CS · Indiana University</span>
+                <span className="hero-meta-label">Education</span>
+                <span className="hero-meta-value">M.S. CS · Indiana University Bloomington — May 2026</span>
               </div>
               <div className="hero-meta-item">
                 <span className="hero-meta-label">Looking for</span>
-                <span className="hero-meta-value">SWE roles · New Grad 2026</span>
+                <span className="hero-meta-value">Frontend SWE · full-stack &amp; cloud</span>
               </div>
             </div>
           </div>
@@ -456,6 +466,7 @@ function Hero() {
 function ExperienceCard({ exp }) {
   const [open, setOpen] = useState(false);
   const [swept, setSwept] = useState(false);
+  const bodyId = `exp-body-${exp.company.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
 
   const handleClick = () => {
     setOpen((o) => !o);
@@ -464,9 +475,9 @@ function ExperienceCard({ exp }) {
   };
 
   return (
-    <div className={`exp-card${open ? ' open' : ''}`}>
+    <div className={`exp-card glass-card${open ? ' open' : ''}`}>
       {swept && <div className="sweep" />}
-      <div className="exp-header" onClick={handleClick}>
+      <button type="button" className="exp-header" onClick={handleClick} aria-expanded={open} aria-controls={bodyId}>
         <div>
           <div className="exp-role">{exp.role}</div>
           <div className="exp-company">{exp.company}</div>
@@ -475,9 +486,9 @@ function ExperienceCard({ exp }) {
             <span>{exp.location}</span>
           </div>
         </div>
-        <div className="exp-toggle">+</div>
-      </div>
-      <div className="exp-body-wrap">
+        <div className="exp-toggle" aria-hidden="true">+</div>
+      </button>
+      <div className="exp-body-wrap" id={bodyId}>
         <div className="exp-body-inner">
           <div className="exp-body">
             <div className="exp-stack">
@@ -499,8 +510,10 @@ function ExperienceCard({ exp }) {
 
 function ProjectCard({ proj }) {
   const [open, setOpen] = useState(false);
+  const tilt = useTilt();
+  const bodyId = `project-body-${proj.num}`;
   return (
-    <div className={`project-card${open ? ' open' : ''}`}>
+    <div className={`project-card glass-card tilt-card${open ? ' open' : ''}`} onMouseMove={tilt.onMouseMove} onMouseLeave={tilt.onMouseLeave}>
       <div className="project-header">
         <div className="project-top-row">
           <div className="project-num">// {proj.num}</div>
@@ -522,12 +535,12 @@ function ProjectCard({ proj }) {
         </div>
       </div>
 
-      <div className="project-expand-btn" onClick={() => setOpen((o) => !o)}>
+      <button type="button" className="project-expand-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={bodyId}>
         <span>{open ? 'Collapse' : 'See details'}</span>
-        <span style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
-      </div>
+        <span aria-hidden="true" style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
+      </button>
 
-      <div className="project-body-wrap">
+      <div className="project-body-wrap" id={bodyId}>
         <div className="project-body-inner">
           <div className="project-body">
             <div className="project-section-title">Problem</div>
@@ -548,48 +561,29 @@ function ProjectCard({ proj }) {
   );
 }
 
-// ── EXPERTISE CARD ────────────────────────────────────────────────────────────
+// ── PINNED REPO CARD ──────────────────────────────────────────────────────────
 
-function ExpertiseCard({ card }) {
-  const [swept, setSwept] = useState(false);
-  const [animated, setAnimated] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setAnimated(true); },
-      { threshold: 0.2 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  const handleClick = () => {
-    setSwept(true);
-    setTimeout(() => setSwept(false), 550);
-  };
-
+function PinnedCard({ repo }) {
+  const tilt = useTilt();
   return (
-    <div ref={ref} className={`expertise-card ${card.accent}`} onClick={handleClick}>
-      {swept && <div className="sweep" />}
-      <span className="expertise-icon">{card.icon}</span>
-      <div className="expertise-name">{card.name}</div>
-      <div className="expertise-desc">{card.desc}</div>
-      <div className="skill-chips">
-        {card.chips.map((c) => <span key={c} className="skill-chip">{c}</span>)}
+    <a
+      href={repo.link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="pinned-card glass-card tilt-card"
+      onMouseMove={tilt.onMouseMove}
+      onMouseLeave={tilt.onMouseLeave}
+    >
+      <div className="pinned-top-row">
+        <span className="pinned-org">{repo.org}</span>
+        <span className="pinned-link-icon" aria-hidden="true">↗</span>
       </div>
-      <div className="skill-bars">
-        {card.skills.map((s) => (
-          <div key={s.name} className="skill-bar-item">
-            <span className="skill-bar-name">{s.name}</span>
-            <div className="skill-bar-track">
-              <div className="skill-bar-fill" style={{ width: animated ? `${s.pct}%` : '0%' }} />
-            </div>
-            <span className="skill-bar-pct">{s.pct}%</span>
-          </div>
-        ))}
+      <div className="pinned-name">{repo.name}</div>
+      <p className="pinned-desc">{repo.desc}</p>
+      <div className="pinned-stack">
+        {repo.stack.map((t) => <span key={t} className="tag">{t}</span>)}
       </div>
-    </div>
+    </a>
   );
 }
 
@@ -597,7 +591,7 @@ function ExpertiseCard({ card }) {
 
 function EducationCard({ edu }) {
   return (
-    <div className="edu-card">
+    <div className="edu-card glass-card">
       <div className="edu-card-accent" />
       <div className="edu-school">{edu.school}</div>
       <div className="edu-degree">{edu.degree}</div>
@@ -624,10 +618,18 @@ function useFadeUp() {
     const els = document.querySelectorAll('.fade-up');
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('visible'); }),
-      { threshold: 0.07 }
+      { threshold: 0.07, rootMargin: '0px 0px -5% 0px' }
     );
     els.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+
+    // Safety net: content must never stay hidden if the observer is slow,
+    // unsupported, or a card never crosses the threshold (e.g. a very short
+    // viewport). Force-reveal anything still unrevealed after a short delay.
+    const fallback = setTimeout(() => {
+      els.forEach((el) => el.classList.add('visible'));
+    }, 2500);
+
+    return () => { observer.disconnect(); clearTimeout(fallback); };
   }, []);
 }
 
@@ -691,19 +693,12 @@ export default function Page() {
                 </div>
               ))}
             </div>
-          </section>
 
-          <hr className="section-divider" />
-
-          {/* EXPERTISE */}
-          <section id="expertise" className="section" style={{ position: 'relative' }}>
-            <div className="section-glow section-glow-purple" />
-            <div className="section-label fade-up">03</div>
-            <h2 className="section-title fade-up">Technical Expertise</h2>
-            <div className="expertise-grid">
-              {EXPERTISE.map((card, i) => (
-                <div key={card.name} className="fade-up" style={{ transitionDelay: `${i * 0.07}s` }}>
-                  <ExpertiseCard card={card} />
+            <h3 className="subsection-title fade-up">More on GitHub</h3>
+            <div className="pinned-grid">
+              {PINNED_REPOS.map((repo, i) => (
+                <div key={repo.org} className="fade-up" style={{ transitionDelay: `${i * 0.08}s` }}>
+                  <PinnedCard repo={repo} />
                 </div>
               ))}
             </div>
@@ -713,7 +708,7 @@ export default function Page() {
 
           {/* EDUCATION */}
           <section id="education" className="section">
-            <div className="section-label fade-up">04</div>
+            <div className="section-label fade-up">03</div>
             <h2 className="section-title fade-up">Education</h2>
             <div className="edu-grid">
               {EDUCATION.map((e, i) => (
@@ -733,7 +728,7 @@ export default function Page() {
                 Let's ship<br /><span>something real.</span>
               </h2>
               <p className="contact-sub fade-up">
-                Graduating May 2026, available now. Looking for full-stack, frontend, or backend SWE roles where the work actually matters.
+                M.S. in Computer Science, Indiana University Bloomington — May 2026. Open to Frontend Software Engineer roles with full-stack and cloud scope.
               </p>
               <div className="contact-links fade-up">
                 <a href="mailto:gauri2029@gmail.com" className="contact-link">✉ gauri2029@gmail.com</a>
