@@ -226,8 +226,7 @@ a, button {
 .is-booted .navbar,
 .is-booted .hero-name,
 .is-booted .hero-tagline,
-.is-booted .hero-cta,
-.is-booted .hero-meta {
+.is-booted .hero-cta {
   animation-play-state: running;
 }
 .is-booted .hero-avatar-wrap,
@@ -303,7 +302,7 @@ a, button {
 main { padding-top: 60px; }
 
 .section {
-  padding: 72px 2rem;
+  padding: 104px 2rem;
   max-width: 1000px;
   margin: 0 auto;
 }
@@ -418,20 +417,6 @@ main { padding-top: 60px; }
   animation: slideUp 0.9s 0.65s cubic-bezier(0.22,1,0.36,1) both;
   animation-play-state: paused;
 }
-
-.hero-meta {
-  display: flex; gap: 40px; flex-wrap: wrap;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
-  animation: slideUp 0.9s 0.9s cubic-bezier(0.22,1,0.36,1) both;
-  animation-play-state: paused;
-}
-.hero-meta-item { display: flex; flex-direction: column; gap: 4px; }
-.hero-meta-label {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--text3);
-}
-.hero-meta-value { font-size: 15px; font-weight: 600; color: var(--text); }
 
 /* ── BUTTONS ── */
 .btn {
@@ -896,11 +881,10 @@ footer {
 @media (max-width: 768px) {
   .nav-links { display: none; }
   .pinned-grid { grid-template-columns: 1fr; }
-  .section { padding: 44px 1.25rem; }
+  .section { padding: 64px 1.25rem; }
   .navbar { padding: 0 1.25rem; }
   .hero { padding: 0 1.25rem; min-height: auto; padding-top: 44px; padding-bottom: 40px; }
   .hero-inner { padding: 0; }
-  .hero-meta { gap: 20px; }
   .contact-section { padding: 48px 1.25rem; }
   .hero-cta { gap: 10px; }
   .btn { padding: 11px 20px; font-size: 13px; }
@@ -1204,6 +1188,8 @@ body::after {
   object-fit: cover;
   object-position: center top;
   z-index: 2;
+  transform: perspective(700px) rotateY(0deg) rotateX(0deg);
+  transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
 }
 
 /* orbiting particles — hidden at rest, only revealed on hover */
@@ -1234,9 +1220,11 @@ body::after {
   to   { transform: rotate(360deg) translateX(190px); }
 }
 
-/* on hover: the ring speeds up and brightens, the glow pulses softly, and
-   two small particles orbit the ring — the avatar image itself never moves
-   or tilts */
+/* on hover: the ring speeds up and brightens, the glow pulses softly, two
+   small particles orbit the ring, and the photo itself gets a gentle
+   static tilt (fixed angle, not cursor-tracked, so it can't fight the
+   breathing pause below or reintroduce the jitter that came from
+   continuous per-mousemove updates on the project cards) */
 @media (hover: hover) and (pointer: fine) {
   /* pause the idle breathing on hover (2nd of the two listed animations)
      so the hover target's bounding box holds still instead of continuously
@@ -1254,6 +1242,9 @@ body::after {
   }
   .hero-avatar-wrap:hover .hero-avatar-orbit {
     opacity: 1;
+  }
+  .hero-avatar-wrap:hover .hero-avatar-img {
+    transform: perspective(700px) rotateY(9deg) rotateX(-4deg);
   }
 }
 

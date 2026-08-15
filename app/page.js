@@ -60,6 +60,8 @@ function ModeSwitcher({ mode, updateMode }) {
 
 function useTilt() {
   const capable = useRef(null);
+  const raf = useRef(null);
+  const pending = useRef(null);
 
   const isCapable = () => {
     if (capable.current === null) {
@@ -71,19 +73,44 @@ function useTilt() {
     return capable.current;
   };
 
+  const flush = () => {
+    raf.current = null;
+    const p = pending.current;
+    if (!p) return;
+    // Chaos mode drives its own fixed bounce transform on these cards and
+    // never reads --tilt-x/--tilt-y, so writing them there only forces
+    // pointless style recalculation on every mousemove (and can visibly
+    // fight the elastic hover transition). Skip entirely in that mode.
+    if (document.documentElement.getAttribute('data-mode') === 'chaos') return;
+    p.el.style.setProperty('--tilt-x', p.tiltX);
+    p.el.style.setProperty('--tilt-y', p.tiltY);
+    p.el.style.setProperty('--glow-x', p.glowX);
+    p.el.style.setProperty('--glow-y', p.glowY);
+  };
+
+  // Batched to at most once per animation frame — raw mousemove can fire
+  // far faster than the display refreshes, and writing the custom
+  // properties that often just churns style recalculation without any
+  // visible benefit, which is what made the tilt feel jittery.
   const onMouseMove = useCallback((e) => {
     if (!isCapable()) return;
     const el = e.currentTarget;
     const rect = el.getBoundingClientRect();
     const px = (e.clientX - rect.left) / rect.width;
     const py = (e.clientY - rect.top) / rect.height;
-    el.style.setProperty('--tilt-x', `${((py - 0.5) * -6).toFixed(2)}deg`);
-    el.style.setProperty('--tilt-y', `${((px - 0.5) * 8).toFixed(2)}deg`);
-    el.style.setProperty('--glow-x', `${(px * 100).toFixed(1)}%`);
-    el.style.setProperty('--glow-y', `${(py * 100).toFixed(1)}%`);
+    pending.current = {
+      el,
+      tiltX: `${((py - 0.5) * -6).toFixed(2)}deg`,
+      tiltY: `${((px - 0.5) * 8).toFixed(2)}deg`,
+      glowX: `${(px * 100).toFixed(1)}%`,
+      glowY: `${(py * 100).toFixed(1)}%`,
+    };
+    if (raf.current === null) raf.current = requestAnimationFrame(flush);
   }, []);
 
   const onMouseLeave = useCallback((e) => {
+    if (raf.current !== null) { cancelAnimationFrame(raf.current); raf.current = null; }
+    pending.current = null;
     const el = e.currentTarget;
     el.style.removeProperty('--tilt-x');
     el.style.removeProperty('--tilt-y');
@@ -122,13 +149,21 @@ function StarField({ booted }) {
     let w = 0;
     let h = 0;
     let stars = [];
+    let fieldStars = [];
     let bursts = [];
     let scrollBoost = 0;
     let warpBoost = 0;
     let wasBooted = bootedRef.current;
     let lastTrailAt = 0;
     const pointer = { x: -9999, y: -9999, active: false };
-    const STAR_COUNT = 130;
+    const STAR_COUNT = 170;
+    // A second, static layer spread evenly across the whole canvas. The
+    // hyperspace stars above use a perspective projection that naturally
+    // clusters near the vanishing point (center) — most of a star's life is
+    // spent at large z, which projects close to center — so on its own it
+    // reads as "stars in the middle, empty at the edges". This layer fixes
+    // that by covering corners/sides uniformly, independent of the drift.
+    const FIELD_STAR_COUNT = 110;
     const BOOT_SPEED = 0.2;
     const BASE_SPEED = 1.6;
     const MAX_BURST = 90;
@@ -140,6 +175,14 @@ function StarField({ booted }) {
       z: Math.random() * w,
     });
 
+    const makeFieldStar = () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: 0.4 + Math.random() * 1.1,
+      baseAlpha: 0.15 + Math.random() * 0.35,
+      phase: Math.random() * Math.PI * 2,
+    });
+
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = canvas.offsetWidth;
@@ -148,6 +191,7 @@ function StarField({ booted }) {
       canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       stars = Array.from({ length: STAR_COUNT }, makeStar);
+      fieldStars = Array.from({ length: FIELD_STAR_COUNT }, makeFieldStar);
     };
     resize();
 
@@ -175,6 +219,18 @@ function StarField({ booted }) {
       const dark = document.documentElement.getAttribute('data-theme') === 'dark';
       const starColor = dark ? '226,232,255' : '124,58,237';
       ctx.fillStyle = `rgba(${starColor},0.9)`;
+
+      // static field layer first (behind the hyperspace stars), evenly
+      // covering the whole canvas including edges/corners
+      const t = reduceMotion ? 0 : performance.now() / 1000;
+      for (const fs of fieldStars) {
+        const alpha = reduceMotion ? fs.baseAlpha : fs.baseAlpha + 0.12 * Math.sin(t * 0.6 + fs.phase);
+        ctx.globalAlpha = Math.max(0.05, alpha);
+        ctx.beginPath();
+        ctx.arc(fs.x, fs.y, fs.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
 
       // boot -> revealed transition: release a decaying warp burst exactly
       // once, synchronized with the cinematic content reveal.
@@ -607,17 +663,6 @@ function Hero() {
               <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">LinkedIn ↗</a>
               <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">GitHub ↗</a>
             </div>
-
-            <div className="hero-meta">
-              <div className="hero-meta-item">
-                <span className="hero-meta-label">Education</span>
-                <span className="hero-meta-value">M.S. CS · Indiana University Bloomington — May 2026</span>
-              </div>
-              <div className="hero-meta-item">
-                <span className="hero-meta-label">Looking for</span>
-                <span className="hero-meta-value">Frontend SWE · full-stack &amp; cloud</span>
-              </div>
-            </div>
           </div>
 
           {/* RIGHT — avatar */}
@@ -804,21 +849,52 @@ function EducationCard({ edu }) {
 
 function useFadeUp() {
   useEffect(() => {
-    const els = document.querySelectorAll('.fade-up, .slide-left, .slide-right');
+    const els = Array.from(document.querySelectorAll('.fade-up, .slide-left, .slide-right'));
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('visible'); }),
       { threshold: 0.07, rootMargin: '0px 0px -5% 0px' }
     );
     els.forEach((el) => observer.observe(el));
 
-    // Safety net: content must never stay hidden if the observer is slow,
-    // unsupported, or a card never crosses the threshold (e.g. a very short
-    // viewport). Force-reveal anything still unrevealed after a short delay.
-    const fallback = setTimeout(() => {
-      els.forEach((el) => el.classList.add('visible'));
-    }, 2500);
+    // Redundant safety net, in case the observer misbehaves: on scroll/resize
+    // (rAF-throttled), reveal anything that's actually near the viewport.
+    // This deliberately does NOT reveal things that are still far below the
+    // fold — a blanket timer that reveals everything a couple seconds after
+    // mount defeats the entire point of a scroll-triggered animation, since
+    // most visitors haven't scrolled that far yet.
+    let ticking = false;
+    const revealNearViewport = () => {
+      ticking = false;
+      const vh = window.innerHeight;
+      els.forEach((el) => {
+        if (el.classList.contains('visible')) return;
+        const r = el.getBoundingClientRect();
+        if (r.top < vh * 1.15 && r.bottom > -vh * 0.15) el.classList.add('visible');
+      });
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(revealNearViewport);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    revealNearViewport();
 
-    return () => { observer.disconnect(); clearTimeout(fallback); };
+    // True last resort — only matters if both the observer and the scroll
+    // listener above have failed (e.g. very old browser), so it's set long
+    // enough that it won't spoil the reveal for anyone actually scrolling
+    // at a normal pace.
+    const hardFallback = setTimeout(() => {
+      els.forEach((el) => el.classList.add('visible'));
+    }, 15000);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      clearTimeout(hardFallback);
+    };
   }, []);
 }
 
