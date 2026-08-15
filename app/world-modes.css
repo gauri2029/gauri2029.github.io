@@ -49,7 +49,7 @@
      ════════════════════════════════════════ */
   
   /* Every interactive card + button gets bouncy hover */
-  [data-mode="chaos"] .project-card:hover,
+  [data-mode="chaos"] .project-card-h:hover,
   [data-mode="chaos"] .exp-card:hover,
   [data-mode="chaos"] .pinned-card:hover,
   [data-mode="chaos"] .edu-card:hover {
@@ -58,7 +58,7 @@
   }
 
   @media (hover: none) {
-    [data-mode="chaos"] .project-card:hover,
+    [data-mode="chaos"] .project-card-h:hover,
     [data-mode="chaos"] .exp-card:hover,
     [data-mode="chaos"] .pinned-card:hover,
     [data-mode="chaos"] .edu-card:hover {
@@ -97,7 +97,7 @@
     animation: chaos-pulse 1s ease-in-out infinite alternate;
   }
 
-  [data-mode="chaos"] .project-card,
+  [data-mode="chaos"] .project-card-h,
   [data-mode="chaos"] .exp-card,
   [data-mode="chaos"] .pinned-card,
   [data-mode="chaos"] .edu-card,
@@ -107,7 +107,7 @@
     will-change: transform;
   }
 
-  [data-mode="chaos"] .project-card {
+  [data-mode="chaos"] .project-card-h {
     transition: transform 0.2s ease-out, border-color 0.3s ease, box-shadow 0.3s ease;
   }
   

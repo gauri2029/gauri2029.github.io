@@ -92,6 +92,85 @@ function useTilt() {
   return { onMouseMove, onMouseLeave };
 }
 
+// ── STAR FIELD ────────────────────────────────────────────────────────────────
+// Plain <canvas> + requestAnimationFrame — no charting/animation library.
+// A slow hyperspace-style drift of dots outward from center. Respects
+// prefers-reduced-motion (draws one static frame and stops) and re-tints
+// itself for the active theme by reading the data-theme attribute each frame.
+
+function StarField() {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let w = 0;
+    let h = 0;
+    let stars = [];
+    const STAR_COUNT = 130;
+
+    const makeStar = () => ({
+      x: (Math.random() - 0.5) * w,
+      y: (Math.random() - 0.5) * h,
+      z: Math.random() * w,
+    });
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.offsetWidth;
+      h = canvas.offsetHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      stars = Array.from({ length: STAR_COUNT }, makeStar);
+    };
+    resize();
+
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      const cx = w / 2;
+      const cy = h / 2;
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      ctx.fillStyle = dark ? 'rgba(226,232,255,0.9)' : 'rgba(76,111,255,0.4)';
+      for (const s of stars) {
+        if (!reduceMotion) {
+          s.z -= 1.6;
+          if (s.z <= 1) Object.assign(s, makeStar(), { z: w });
+        }
+        const k = 128 / s.z;
+        const sx = s.x * k + cx;
+        const sy = s.y * k + cy;
+        if (sx < 0 || sx > w || sy < 0 || sy > h) continue;
+        const size = Math.max(0.4, (1 - s.z / w) * 2.2);
+        ctx.globalAlpha = Math.max(0.12, 1 - s.z / w);
+        ctx.beginPath();
+        ctx.arc(sx, sy, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    };
+
+    let raf = null;
+    if (reduceMotion) {
+      draw();
+    } else {
+      const tick = () => { draw(); raf = requestAnimationFrame(tick); };
+      raf = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('resize', resize);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  return <canvas className="starfield" ref={canvasRef} aria-hidden="true" />;
+}
+
 // ── MOTION LAYER ──────────────────────────────────────────────────────────────
 
 function MotionLayer() {
@@ -155,6 +234,7 @@ function MotionLayer() {
 
   return (
     <>
+      <StarField />
       <div className="dot-grid" aria-hidden="true" />
       <div className="cursor-glow" ref={cursorRef} aria-hidden="true" />
     </>
@@ -164,19 +244,6 @@ function MotionLayer() {
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
 const EXPERIENCE = [
-  {
-    role: 'Software Developer',
-    company: 'Cyberinfrastructure for Network Science Center (CNS)',
-    location: 'Bloomington, IN',
-    period: 'Jan 2025 - Jan 2026',
-    stack: ['Angular', 'TypeScript', 'RxJS', 'AWS S3', 'Jest', 'GitHub Actions'],
-    bullets: [
-      '<strong>Developed and enhanced</strong> Angular + TypeScript frontend on the NIH-funded Human Reference Atlas platform, integrating AWS S3 and building shared design system components and reusable libraries — ensuring WCAG accessibility and scalability, reducing frontend development overhead ~20%.',
-      '<strong>Designed and implemented</strong> new user-facing interfaces in Angular and TypeScript, optimizing RxJS-driven data flows across critical user journeys and reducing redundant API requests ~20%.',
-      '<strong>Owned production stability</strong> through monitoring, debugging, and resolving live issues — ensuring reliable releases with zero critical user-facing disruptions.',
-      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted developer tools to accelerate iteration and delivery, reducing build and release friction ~25%.',
-    ],
-  },
   {
     role: 'Software Engineer',
     company: 'Tietoevry India Pvt. Ltd.',
@@ -190,6 +257,19 @@ const EXPERIENCE = [
       '<strong>Built CI/CD pipelines</strong> with Azure DevOps and Docker, automating deployments and reducing production incidents ~35% within an agile delivery workflow.',
     ],
   },
+  {
+    role: 'Software Developer',
+    company: 'Cyberinfrastructure for Network Science Center (CNS)',
+    location: 'Bloomington, IN',
+    period: 'Jan 2025 - Jan 2026',
+    stack: ['Angular', 'TypeScript', 'RxJS', 'AWS S3', 'Jest', 'GitHub Actions'],
+    bullets: [
+      '<strong>Developed and enhanced</strong> Angular + TypeScript frontend on the NIH-funded Human Reference Atlas platform, integrating AWS S3 and building shared design system components and reusable libraries — ensuring WCAG accessibility and scalability, reducing frontend development overhead ~20%.',
+      '<strong>Designed and implemented</strong> new user-facing interfaces in Angular and TypeScript, optimizing RxJS-driven data flows across critical user journeys and reducing redundant API requests ~20%.',
+      '<strong>Owned production stability</strong> through monitoring, debugging, and resolving live issues — ensuring reliable releases with zero critical user-facing disruptions.',
+      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted developer tools to accelerate iteration and delivery, reducing build and release friction ~25%.',
+    ],
+  },
 ];
 
 const PROJECTS = [
@@ -197,6 +277,8 @@ const PROJECTS = [
     num: '01',
     name: 'DocuQuery',
     link: 'https://github.com/gauri2029/docuquery',
+    image: 'https://loremflickr.com/640/480/artificialintelligence,circuitboard',
+    accent: 'cobalt',
     tagline: 'AI-powered documentation assistant for developers',
     desc: 'A secure, self-hosted assistant that lets developers query internal docs in plain English and get source-cited answers instantly — built to keep sensitive documentation off third-party servers.',
     metrics: [
@@ -213,6 +295,8 @@ const PROJECTS = [
     num: '02',
     name: 'Degree Flowchart',
     link: 'https://github.com/degree-flowchart',
+    image: 'https://loremflickr.com/640/480/graduation,university',
+    accent: 'coral',
     tagline: 'Cloud-native degree planning with Angular and Spring Boot microservices',
     desc: 'A distributed degree planning platform with a dynamic Angular UI, OAuth-based authentication via Keycloak, schedule exports, and a microservices backend built to scale under real load.',
     metrics: [
@@ -229,6 +313,8 @@ const PROJECTS = [
     num: '03',
     name: 'IUCAT Library System',
     link: 'https://iucat-library.onrender.com',
+    image: 'https://loremflickr.com/640/480/library,bookshelf',
+    accent: 'amber',
     tagline: 'Fully deployed library system - live on AWS ECS and Render',
     desc: 'A production-deployed library platform with book rentals, holds queue, AJAX search, and full observability - not just a backend exercise.',
     metrics: [
@@ -269,17 +355,17 @@ const PINNED_REPOS = [
 
 const EDUCATION = [
   {
-    school: 'Indiana University Bloomington',
-    degree: 'M.S. in Computer Science',
-    period: 'Aug 2024 - May 2026',
-    courses: ['Cloud Computing', 'Computer Networks', 'Software Engineering', 'Applied Algorithms', 'Applied Machine Learning'],
-  },
-  {
     school: 'Savitribai Phule Pune University',
     degree: 'B.E. in Computer Engineering · Honors in Data Science & Machine Learning',
     period: 'May 2018 - May 2022',
     gpa: '3.8 / 4.0',
     courses: ['Data Structures', 'Algorithms', 'Database Systems', 'Operating Systems', 'Computer Networks', 'Artificial Intelligence', 'Machine Learning'],
+  },
+  {
+    school: 'Indiana University Bloomington',
+    degree: 'M.S. in Computer Science',
+    period: 'Aug 2024 - May 2026',
+    courses: ['Cloud Computing', 'Computer Networks', 'Software Engineering', 'Applied Algorithms', 'Applied Machine Learning'],
   },
 ];
 
@@ -341,11 +427,11 @@ function BootScreen({ onComplete }) {
 // ── THEME TOGGLE ──────────────────────────────────────────────────────────────
 
 function ThemeToggle() {
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('theme') : null;
-    const isDark = saved ? saved === 'dark' : true;
+    const isDark = saved ? saved === 'dark' : false;
     setDark(isDark);
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, []);
@@ -384,10 +470,12 @@ function Navbar({ mode, updateMode }) {
         <li><a href="#contact">Contact</a></li>
       </ul>
       <div className="nav-right">
-        <div className="nav-status">
-          <div className="status-dot" />
-          Open to work
-        </div>
+        <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="nav-icon-link" aria-label="LinkedIn" title="LinkedIn">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
+        </a>
+        <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="nav-icon-link" aria-label="GitHub" title="GitHub">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.19c0 4.49 2.87 8.3 6.84 9.65.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.88-2.78.6-3.37-1.21-3.37-1.21-.45-1.18-1.11-1.49-1.11-1.49-.9-.63.07-.62.07-.62 1 .07 1.53 1.04 1.53 1.04.89 1.55 2.34 1.1 2.91.84.09-.66.35-1.1.63-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.05a9.3 9.3 0 0 1 2.5-.35c.85 0 1.71.12 2.5.35 1.91-1.32 2.75-1.05 2.75-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.6.69.49A10.2 10.2 0 0 0 22 12.19C22 6.58 17.52 2 12 2z"/></svg>
+        </a>
         <ModeSwitcher mode={mode} updateMode={updateMode} />
         <ThemeToggle />
       </div>
@@ -409,11 +497,6 @@ function Hero() {
 
           {/* LEFT — text content */}
           <div className="hero-text">
-            <div className="hero-eyebrow">
-              <span className="hero-eyebrow-dot" />
-              exp=3yrs · focus=frontend · scope=full-stack+cloud
-            </div>
-
             <h1 className="hero-name">
               Gauri
               <span className="hero-name-grad">Markandey.</span>
@@ -426,9 +509,9 @@ function Hero() {
             </p>
 
             <div className="hero-cta">
-              <a href="https://drive.google.com/file/d/18Sqk9BWoF2OWuwOGDjTkC_3rtmnv5JB6/view?usp=sharing" target="_blank" rel="noopener noreferrer" className="btn btn-primary">View Resume →</a>
-              <a href="#contact" className="btn btn-ghost">Get in Touch</a>
+              <a href="#contact" className="btn btn-primary">Get in Touch</a>
               <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">LinkedIn ↗</a>
+              <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="btn btn-ghost">GitHub ↗</a>
             </div>
 
             <div className="hero-meta">
@@ -475,7 +558,7 @@ function ExperienceCard({ exp }) {
   };
 
   return (
-    <div className={`exp-card glass-card${open ? ' open' : ''}`}>
+    <div className={`exp-card timeline-card glass-card${open ? ' open' : ''}`}>
       {swept && <div className="sweep" />}
       <button type="button" className="exp-header" onClick={handleClick} aria-expanded={open} aria-controls={bodyId}>
         <div>
@@ -508,22 +591,30 @@ function ExperienceCard({ exp }) {
 
 // ── PROJECT CARD ──────────────────────────────────────────────────────────────
 
-function ProjectCard({ proj }) {
+function ProjectCard({ proj, reverse }) {
   const [open, setOpen] = useState(false);
   const tilt = useTilt();
   const bodyId = `project-body-${proj.num}`;
   return (
-    <div className={`project-card glass-card tilt-card${open ? ' open' : ''}`} onMouseMove={tilt.onMouseMove} onMouseLeave={tilt.onMouseLeave}>
-      <div className="project-header">
+    <div
+      className={`project-card-h glass-card tilt-card accent-${proj.accent}${reverse ? ' reverse' : ''}${open ? ' open' : ''}`}
+      onMouseMove={tilt.onMouseMove}
+      onMouseLeave={tilt.onMouseLeave}
+    >
+      <div className="project-card-image">
+        <img src={proj.image} alt={`${proj.name} preview`} loading="lazy" />
+        <div className="project-num">// {proj.num}</div>
+      </div>
+
+      <div className="project-card-content">
         <div className="project-top-row">
-          <div className="project-num">// {proj.num}</div>
+          <div className="project-name">{proj.name}</div>
           {proj.link && (
             <a href={proj.link} target="_blank" rel="noopener noreferrer" className="project-link-icon" title="View project">
               ↗
             </a>
           )}
         </div>
-        <div className="project-name">{proj.name}</div>
         <div className="project-desc">{proj.desc}</div>
         <div className="project-metrics">
           {proj.metrics.map((m) => (
@@ -533,27 +624,27 @@ function ProjectCard({ proj }) {
             </div>
           ))}
         </div>
-      </div>
 
-      <button type="button" className="project-expand-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={bodyId}>
-        <span>{open ? 'Collapse' : 'See details'}</span>
-        <span aria-hidden="true" style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
-      </button>
+        <button type="button" className="project-expand-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={bodyId}>
+          <span>{open ? 'Collapse' : 'See details'}</span>
+          <span aria-hidden="true" style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
+        </button>
 
-      <div className="project-body-wrap" id={bodyId}>
-        <div className="project-body-inner">
-          <div className="project-body">
-            <div className="project-section-title">Problem</div>
-            <p>{proj.problem}</p>
-            <div className="project-section-title">Approach</div>
-            <p>{proj.approach}</p>
-            <div className="project-section-title">Impact</div>
-            <p>{proj.impact}</p>
-            <div className="project-section-title" style={{ marginTop: 16 }}>Stack</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-              {proj.stack.map((t) => <span key={t} className="tag cyan">{t}</span>)}
+        <div className="project-body-wrap" id={bodyId}>
+          <div className="project-body-inner">
+            <div className="project-body">
+              <div className="project-section-title">Problem</div>
+              <p>{proj.problem}</p>
+              <div className="project-section-title">Approach</div>
+              <p>{proj.approach}</p>
+              <div className="project-section-title">Impact</div>
+              <p>{proj.impact}</p>
+              <div className="project-section-title" style={{ marginTop: 16 }}>Stack</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                {proj.stack.map((t) => <span key={t} className="tag cyan">{t}</span>)}
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{proj.period}</div>
             </div>
-            <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{proj.period}</div>
           </div>
         </div>
       </div>
@@ -591,7 +682,7 @@ function PinnedCard({ repo }) {
 
 function EducationCard({ edu }) {
   return (
-    <div className="edu-card glass-card">
+    <div className="edu-card timeline-card glass-card">
       <div className="edu-card-accent" />
       <div className="edu-school">{edu.school}</div>
       <div className="edu-degree">{edu.degree}</div>
@@ -615,7 +706,7 @@ function EducationCard({ edu }) {
 
 function useFadeUp() {
   useEffect(() => {
-    const els = document.querySelectorAll('.fade-up');
+    const els = document.querySelectorAll('.fade-up, .slide-left, .slide-right');
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('visible'); }),
       { threshold: 0.07, rootMargin: '0px 0px -5% 0px' }
@@ -669,7 +760,7 @@ export default function Page() {
           <section id="experience" className="section" style={{ position: 'relative' }}>
             <div className="section-glow section-glow-purple" />
             <div className="section-label fade-up">01</div>
-            <h2 className="section-title fade-up">Work Experience</h2>
+            <h2 className="section-title slide-left">Work Experience</h2>
             <div className="timeline" style={{ paddingLeft: 4 }}>
               {EXPERIENCE.map((exp, i) => (
                 <div key={exp.company} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
@@ -685,11 +776,11 @@ export default function Page() {
           <section id="projects" className="section" style={{ position: 'relative' }}>
             <div className="section-glow section-glow-cyan" />
             <div className="section-label fade-up">02</div>
-            <h2 className="section-title fade-up">Projects</h2>
-            <div className="projects-grid">
+            <h2 className="section-title slide-left">Projects</h2>
+            <div className="projects-list">
               {PROJECTS.map((p, i) => (
-                <div key={p.num} className="fade-up" style={{ transitionDelay: `${i * 0.09}s` }}>
-                  <ProjectCard proj={p} />
+                <div key={p.num} className={i % 2 === 0 ? 'slide-left' : 'slide-right'} style={{ transitionDelay: `${i * 0.08}s` }}>
+                  <ProjectCard proj={p} reverse={i % 2 === 1} />
                 </div>
               ))}
             </div>
@@ -709,8 +800,8 @@ export default function Page() {
           {/* EDUCATION */}
           <section id="education" className="section">
             <div className="section-label fade-up">03</div>
-            <h2 className="section-title fade-up">Education</h2>
-            <div className="edu-grid">
+            <h2 className="section-title slide-left">Education</h2>
+            <div className="timeline" style={{ paddingLeft: 4 }}>
               {EDUCATION.map((e, i) => (
                 <div key={e.school} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
                   <EducationCard edu={e} />
