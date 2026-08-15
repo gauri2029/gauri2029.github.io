@@ -503,6 +503,51 @@ const PINNED_REPOS = [
   },
 ];
 
+const SKILL_CATEGORIES = [
+  {
+    name: 'Languages',
+    color: 'var(--cyan)',
+    grad: 'var(--grad-ct)',
+    skills: ['TypeScript', 'JavaScript', 'Python', 'Java', 'SQL', 'Go', 'PHP'],
+  },
+  {
+    name: 'Frontend',
+    color: 'var(--primary)',
+    grad: 'var(--grad-pc)',
+    skills: ['React', 'Angular', 'Next.js', 'HTML5', 'CSS3', 'Tailwind CSS', 'RxJS', 'Storybook', 'Figma', 'WCAG'],
+  },
+  {
+    name: 'Backend & APIs',
+    color: 'var(--teal)',
+    grad: 'var(--grad-tv)',
+    skills: ['Node.js', 'Express.js', 'Spring Boot', 'REST APIs', 'GraphQL', 'FastAPI', 'Flask', 'Django'],
+  },
+  {
+    name: 'Data & AI',
+    color: 'var(--violet)',
+    grad: 'var(--grad-cv)',
+    skills: ['PostgreSQL', 'MongoDB', 'Redis', 'Kafka', 'MySQL', 'SQL Server', 'RAG', 'LLM Integration', 'OpenAI API'],
+  },
+  {
+    name: 'Cloud & DevOps',
+    color: 'var(--amber)',
+    grad: 'var(--grad-ac)',
+    skills: ['AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Terraform', 'GitHub Actions', 'CI/CD', 'Prometheus', 'Grafana'],
+  },
+  {
+    name: 'Testing & Tooling',
+    color: 'var(--green)',
+    grad: 'var(--grad-gt)',
+    skills: ['Jest', 'React Testing Library', 'Playwright', 'Selenium', 'Git', 'Cursor', 'GitHub Copilot'],
+  },
+];
+
+// Strongest/most-used technologies — rendered as emphasized pills.
+const CORE_SKILLS = new Set([
+  'TypeScript', 'JavaScript', 'React', 'Next.js', 'Angular',
+  'Node.js', 'AWS', 'Docker', 'PostgreSQL', 'LLM Integration',
+]);
+
 const EDUCATION = [
   {
     school: 'Savitribai Phule Pune University',
@@ -616,6 +661,7 @@ function Navbar({ mode, updateMode }) {
       <ul className="nav-links">
         <li><a href="#experience">Experience</a></li>
         <li><a href="#projects">Projects</a></li>
+        <li><a href="#skills">Skills</a></li>
         <li><a href="#education">Education</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
@@ -845,6 +891,37 @@ function EducationCard({ edu }) {
   );
 }
 
+// ── SKILL CARD ─────────────────────────────────────────────────────────────────
+
+function SkillCard({ cat }) {
+  const tilt = useTilt();
+  return (
+    <div
+      className="skill-card glass-card tilt-card"
+      style={{ '--cat-color': cat.color, '--cat-grad': cat.grad }}
+      onMouseMove={tilt.onMouseMove}
+      onMouseLeave={tilt.onMouseLeave}
+    >
+      <div className="skill-card-accent" />
+      <div className="skill-card-header">
+        <span className="skill-card-dot" aria-hidden="true" />
+        <h3 className="skill-card-title">{cat.name}</h3>
+      </div>
+      <div className="skill-pills">
+        {cat.skills.map((skill, j) => (
+          <span
+            key={skill}
+            className={`tag skill-pill${CORE_SKILLS.has(skill) ? ' skill-pill-core' : ''}`}
+            style={{ transitionDelay: `${0.05 + j * 0.035}s` }}
+          >
+            {skill}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── FADE UP HOOK ──────────────────────────────────────────────────────────────
 
 function useFadeUp() {
@@ -965,9 +1042,26 @@ export default function Page() {
             </div>
           </section>
 
+          {/* SKILLS */}
+          <section id="skills" className="section" style={{ position: 'relative' }}>
+            <div className="section-glow section-glow-teal" />
+            <div className="section-label fade-up">03</div>
+            <h2 className="section-title slide-left">Skills</h2>
+            <p className="skills-intro fade-up">
+              Languages, frameworks, and tools I reach for most - core strengths stand out.
+            </p>
+            <div className="skills-grid">
+              {SKILL_CATEGORIES.map((cat, i) => (
+                <div key={cat.name} className="fade-up" style={{ transitionDelay: `${i * 0.1}s` }}>
+                  <SkillCard cat={cat} />
+                </div>
+              ))}
+            </div>
+          </section>
+
           {/* EDUCATION */}
           <section id="education" className="section">
-            <div className="section-label fade-up">03</div>
+            <div className="section-label fade-up">04</div>
             <h2 className="section-title slide-left">Education</h2>
             <div className="timeline" style={{ paddingLeft: 4 }}>
               {EDUCATION.map((e, i) => (
