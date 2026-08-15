@@ -94,9 +94,12 @@ function useTilt() {
 
 // ── STAR FIELD ────────────────────────────────────────────────────────────────
 // Plain <canvas> + requestAnimationFrame — no charting/animation library.
-// A slow hyperspace-style drift of dots outward from center. Respects
-// prefers-reduced-motion (draws one static frame and stops) and re-tints
-// itself for the active theme by reading the data-theme attribute each frame.
+// Ambient hyperspace-style drift, plus three interaction responses:
+//   - pointer move nudges nearby stars outward (hover-capable, fine pointer only)
+//   - click/tap spawns a short-lived particle burst from that point
+//   - scroll gives the drift a brief speed boost that decays back to baseline
+// Respects prefers-reduced-motion (draws one static frame, no listeners) and
+// re-tints itself for the active theme by reading data-theme each frame.
 
 function StarField() {
   const canvasRef = useRef(null);
@@ -106,11 +109,17 @@ function StarField() {
     if (!canvas) return undefined;
     const ctx = canvas.getContext('2d');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     let w = 0;
     let h = 0;
     let stars = [];
+    let bursts = [];
+    let scrollBoost = 0;
+    const pointer = { x: -9999, y: -9999, active: false };
     const STAR_COUNT = 130;
+    const BASE_SPEED = 1.6;
+    const MAX_BURST = 160;
 
     const makeStar = () => ({
       x: (Math.random() - 0.5) * w,
@@ -129,26 +138,79 @@ function StarField() {
     };
     resize();
 
+    const spawnBurst = (x, y) => {
+      const count = 16;
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+        const speed = 1.2 + Math.random() * 2.4;
+        bursts.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1,
+          size: 1.4 + Math.random() * 1.6,
+        });
+      }
+      if (bursts.length > MAX_BURST) bursts = bursts.slice(bursts.length - MAX_BURST);
+    };
+
     const draw = () => {
       ctx.clearRect(0, 0, w, h);
       const cx = w / 2;
       const cy = h / 2;
       const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-      ctx.fillStyle = dark ? 'rgba(226,232,255,0.9)' : 'rgba(76,111,255,0.4)';
+      const starColor = dark ? '226,232,255' : '76,111,255';
+      ctx.fillStyle = `rgba(${starColor},0.9)`;
+
+      const speed = BASE_SPEED + scrollBoost;
+      scrollBoost *= 0.92;
+
       for (const s of stars) {
         if (!reduceMotion) {
-          s.z -= 1.6;
+          s.z -= speed;
           if (s.z <= 1) Object.assign(s, makeStar(), { z: w });
         }
         const k = 128 / s.z;
-        const sx = s.x * k + cx;
-        const sy = s.y * k + cy;
+        let sx = s.x * k + cx;
+        let sy = s.y * k + cy;
         if (sx < 0 || sx > w || sy < 0 || sy > h) continue;
+
+        if (pointer.active) {
+          const dx = sx - pointer.x;
+          const dy = sy - pointer.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const radius = 110;
+          if (dist < radius && dist > 0.01) {
+            const push = ((radius - dist) / radius) * 18;
+            sx += (dx / dist) * push;
+            sy += (dy / dist) * push;
+          }
+        }
+
         const size = Math.max(0.4, (1 - s.z / w) * 2.2);
         ctx.globalAlpha = Math.max(0.12, 1 - s.z / w);
         ctx.beginPath();
         ctx.arc(sx, sy, size, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      if (bursts.length) {
+        const next = [];
+        for (const b of bursts) {
+          b.x += b.vx;
+          b.y += b.vy;
+          b.vx *= 0.96;
+          b.vy *= 0.96;
+          b.life -= 0.02;
+          if (b.life > 0) {
+            ctx.globalAlpha = b.life;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.size * b.life, 0, Math.PI * 2);
+            ctx.fill();
+            next.push(b);
+          }
+        }
+        bursts = next;
       }
       ctx.globalAlpha = 1;
     };
@@ -162,9 +224,40 @@ function StarField() {
     }
 
     window.addEventListener('resize', resize);
+
+    let onMove;
+    let onLeave;
+    if (!reduceMotion && canHover) {
+      onMove = (e) => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; };
+      onLeave = () => { pointer.active = false; };
+      window.addEventListener('mousemove', onMove, { passive: true });
+      window.addEventListener('mouseleave', onLeave, { passive: true });
+    }
+
+    let onClick;
+    if (!reduceMotion) {
+      onClick = (e) => spawnBurst(e.clientX, e.clientY);
+      window.addEventListener('click', onClick, { passive: true });
+    }
+
+    let onScroll;
+    if (!reduceMotion) {
+      let lastY = window.scrollY;
+      onScroll = () => {
+        const y = window.scrollY;
+        scrollBoost = Math.min(6, scrollBoost + Math.abs(y - lastY) * 0.06);
+        lastY = y;
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+
     return () => {
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
+      if (onMove) window.removeEventListener('mousemove', onMove);
+      if (onLeave) window.removeEventListener('mouseleave', onLeave);
+      if (onClick) window.removeEventListener('click', onClick);
+      if (onScroll) window.removeEventListener('scroll', onScroll);
     };
   }, []);
 
@@ -174,27 +267,7 @@ function StarField() {
 // ── MOTION LAYER ──────────────────────────────────────────────────────────────
 
 function MotionLayer() {
-  const cursorRef = useRef(null);
-  const pos = useRef({ x: -999, y: -999 });
-  const raf = useRef(null);
-
   useEffect(() => {
-    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-
-    let onMove;
-    if (canHover) {
-      onMove = (e) => { pos.current = { x: e.clientX, y: e.clientY }; };
-      const tick = () => {
-        if (cursorRef.current) {
-          cursorRef.current.style.left = pos.current.x + 'px';
-          cursorRef.current.style.top = pos.current.y + 'px';
-        }
-        raf.current = requestAnimationFrame(tick);
-      };
-      window.addEventListener('mousemove', onMove, { passive: true });
-      raf.current = requestAnimationFrame(tick);
-    }
-
     const navbar = document.querySelector('.navbar');
     const onScroll = () => {
       if (!navbar) return;
@@ -224,10 +297,8 @@ function MotionLayer() {
     glows.forEach((g) => glowObserver.observe(g));
 
     return () => {
-      if (onMove) window.removeEventListener('mousemove', onMove);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('scroll', onParallax);
-      if (raf.current) cancelAnimationFrame(raf.current);
       glowObserver.disconnect();
     };
   }, []);
@@ -236,7 +307,6 @@ function MotionLayer() {
     <>
       <StarField />
       <div className="dot-grid" aria-hidden="true" />
-      <div className="cursor-glow" ref={cursorRef} aria-hidden="true" />
     </>
   );
 }
@@ -754,8 +824,6 @@ export default function Page() {
         <main>
           <Hero />
 
-          <hr className="section-divider" />
-
           {/* EXPERIENCE */}
           <section id="experience" className="section" style={{ position: 'relative' }}>
             <div className="section-glow section-glow-purple" />
@@ -769,8 +837,6 @@ export default function Page() {
               ))}
             </div>
           </section>
-
-          <hr className="section-divider" />
 
           {/* PROJECTS */}
           <section id="projects" className="section" style={{ position: 'relative' }}>
@@ -795,8 +861,6 @@ export default function Page() {
             </div>
           </section>
 
-          <hr className="section-divider" />
-
           {/* EDUCATION */}
           <section id="education" className="section">
             <div className="section-label fade-up">03</div>
@@ -810,21 +874,12 @@ export default function Page() {
             </div>
           </section>
 
-          <hr className="section-divider" />
-
           {/* CONTACT */}
           <section id="contact">
             <div className="contact-section">
-              <h2 className="contact-title fade-up">
-                Let's ship<br /><span>something real.</span>
-              </h2>
-              <p className="contact-sub fade-up">
-                M.S. in Computer Science, Indiana University Bloomington — May 2026. Open to Frontend Software Engineer roles with full-stack and cloud scope.
-              </p>
+              <h2 className="contact-title fade-up">Let's connect</h2>
               <div className="contact-links fade-up">
                 <a href="mailto:gauri2029@gmail.com" className="contact-link">✉ gauri2029@gmail.com</a>
-                <a href="https://linkedin.com/in/gaurimarkandey" target="_blank" rel="noopener noreferrer" className="contact-link">↗ LinkedIn</a>
-                <a href="https://github.com/gauri2029" target="_blank" rel="noopener noreferrer" className="contact-link">⌥ GitHub</a>
               </div>
             </div>
           </section>
