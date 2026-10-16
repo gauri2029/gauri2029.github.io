@@ -18,7 +18,7 @@ export async function generateMetadata({ params }) {
 
   const title = `${project.name} — Gauri Markandey`;
   const description = project.pitch || project.tagline;
-  const poster = `/projects/${slug}/poster.png`;
+  const poster = project.previewImage;
 
   return {
     title,
@@ -26,14 +26,14 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title,
       description,
-      images: [{ url: poster }],
+      images: poster ? [{ url: poster }] : undefined,
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [poster],
+      images: poster ? [poster] : undefined,
     },
   };
 }
@@ -62,7 +62,7 @@ export default async function CaseStudyPage({ params }) {
 
         <DemoVideo
           src={`/projects/${slug}/demo.mp4`}
-          poster={`/projects/${slug}/poster.png`}
+          previewImage={project.previewImage}
           name={project.name}
         />
 
@@ -96,11 +96,13 @@ export default async function CaseStudyPage({ params }) {
         {project.architectureImage && (
           <section className="case-study-section">
             <h2 className="case-study-section-title">Architecture</h2>
-            <ImgWithFallback
-              src={project.architectureImage}
-              alt={`${project.name} architecture diagram`}
-              className="case-study-architecture"
-            />
+            <div className="case-study-architecture-scroll">
+              <ImgWithFallback
+                src={project.architectureImage}
+                alt={`${project.name} architecture diagram`}
+                className="case-study-architecture"
+              />
+            </div>
           </section>
         )}
 

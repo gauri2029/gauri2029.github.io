@@ -33,6 +33,15 @@ export interface Project {
   caseStudySlug?: string;
   /** One-line pitch shown under the case-study title. */
   pitch?: string;
+  /**
+   * Static image (screenshot or gif) shown in the case-study page's media
+   * slot. Used as-is when there's no `demo.mp4` yet, and as the <video>
+   * poster once one exists. Separate from `image` (the homepage card
+   * thumbnail) since the two don't always match — e.g. DocuQuery's
+   * homepage card keeps its existing illustration while the case-study
+   * page gets a real product screenshot.
+   */
+  previewImage?: string;
   /** 3-4 stat cards for the case-study page. */
   stats?: ProjectStat[];
   whatIBuilt?: string[];
@@ -50,7 +59,7 @@ export const PROJECTS: Project[] = [
   {
     num: '01',
     name: 'Design Drift',
-    image: '/projects/design-drift/poster.png',
+    image: '/projects/design-drift/poster.jpg',
     accent: 'violet',
     tagline: 'AI design QA that catches drift between Figma and production',
     desc: 'AI-powered design QA that compares Figma designs against live UIs, traces visual drift back to the exact source code responsible, and proposes fixes that stay behind human approval.',
@@ -65,6 +74,9 @@ export const PROJECTS: Project[] = [
     impact: '92% retrieval accuracy gated in CI, backed by 300+ backend tests and an eval harness that caught 3 real defects unit tests had missed.',
     caseStudySlug: 'design-drift',
     pitch: 'AI design QA that compares Figma to live UIs, traces drift to source code, and proposes fixes behind human approval.',
+    // Real screenshot of Design Drift's own drift-detection UI. Will be
+    // swapped for an actual demo gif/video later.
+    previewImage: '/projects/design-drift/poster.jpg',
     stats: [
       { val: '8', label: 'specialized agents' },
       { val: '92%', label: 'retrieval accuracy, gated in CI' },
@@ -79,7 +91,7 @@ export const PROJECTS: Project[] = [
       'An eval harness, backed by 300+ backend tests, that caught 3 real defects unit tests had missed',
     ],
     whatNext: 'TODO',
-    architectureImage: '/projects/design-drift/architecture.png',
+    architectureImage: '/projects/design-drift/architecture.svg',
     links: {
       github: 'https://github.com/gauri2029/design-drift',
     },
@@ -103,6 +115,8 @@ export const PROJECTS: Project[] = [
     period: 'Dec 2025 - Jan 2026',
     caseStudySlug: 'docuquery',
     pitch: 'A RAG workspace with document-scoped retrieval, cited answers, and observability.',
+    // Real screenshot of DocuQuery's document-ingestion screen.
+    previewImage: '/projects/docuquery/poster.jpg',
     stats: [
       { val: 'Sub-second', label: 'P95 latency' },
       { val: '5', label: 'services orchestrated' },
@@ -115,7 +129,7 @@ export const PROJECTS: Project[] = [
       'Micrometer metrics surfaced as P50/P95/P99 dashboards in Grafana',
     ],
     whatNext: 'TODO',
-    architectureImage: '/projects/docuquery/architecture.png',
+    architectureImage: '/projects/docuquery/architecture.svg',
     links: {
       github: 'https://github.com/gauri2029/docuquery',
     },

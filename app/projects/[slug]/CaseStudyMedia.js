@@ -4,19 +4,20 @@ import { useEffect, useRef, useState } from 'react';
 
 // `error` events on <img>/<video> don't bubble, and these elements are
 // server-rendered — if we set `src` directly in JSX, the browser can fetch
-// and fail before React finishes hydrating and attaching the error
+// and fail before React finishes hydrating and attaches the error
 // listener, silently losing the event. So instead we render the element
 // without a `src`, then in an effect attach the error listener via `ref`
 // *first* and only then assign `src` imperatively — the fetch can't
 // resolve before the listener is already in place.
 
 // Self-hosted demo video: autoplay/muted/loop for motion-OK visitors, falls
-// back to a paused, controllable player (with poster) under
-// prefers-reduced-motion, and disappears entirely if the file is missing
-// instead of showing a broken player.
-export function DemoVideo({ src, poster, name }) {
+// back to a paused, controllable player (with `previewImage` as poster)
+// under prefers-reduced-motion. If the video file doesn't exist yet, falls
+// back further to showing `previewImage` as a static preview; if neither
+// exists, the whole block disappears instead of showing anything broken.
+export function DemoVideo({ src, previewImage, name }) {
   const videoRef = useRef(null);
-  const [failed, setFailed] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   // Lazy-initialized so the very first client render already respects the
   // preference (avoids a one-frame flash of autoplay before an effect
   // could correct it).
@@ -32,22 +33,34 @@ export function DemoVideo({ src, poster, name }) {
   }, []);
 
   useEffect(() => {
+    if (!src) { setVideoFailed(true); return undefined; }
     const el = videoRef.current;
-    if (!el || !src) return undefined;
-    const onError = () => setFailed(true);
+    if (!el) return undefined;
+    const onError = () => setVideoFailed(true);
     el.addEventListener('error', onError);
     el.src = src;
     return () => el.removeEventListener('error', onError);
   }, [src]);
 
-  if (failed) return null;
+  if (videoFailed) {
+    if (!previewImage) return null;
+    return (
+      <div className="case-study-media">
+        <ImgWithFallback
+          src={previewImage}
+          alt={`${name} preview`}
+          className="case-study-video"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="case-study-media">
       <video
         ref={videoRef}
         className="case-study-video"
-        poster={poster}
+        poster={previewImage}
         autoPlay={!reducedMotion}
         loop={!reducedMotion}
         muted

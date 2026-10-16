@@ -1500,9 +1500,20 @@ body::after {
   width: 6px; height: 6px; border-radius: 50%; background: var(--primary);
 }
 
+/* Architecture diagrams are wide flowcharts — shrinking them to the text
+   column width makes labels illegible, so this scrolls horizontally at a
+   fixed, readable size instead of forcing a shrink-to-fit. */
+.case-study-architecture-scroll {
+  width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  border-radius: var(--r-md); border: 1px solid var(--glass-border);
+  background: #fff;
+}
 .case-study-architecture {
-  width: 100%; height: auto; border-radius: var(--r-md);
-  border: 1px solid var(--glass-border); display: block;
+  display: block; height: auto;
+  width: 1300px; max-width: none;
+}
+@media (max-width: 600px) {
+  .case-study-architecture { width: 1000px; }
 }
 
 .case-study-todo {
