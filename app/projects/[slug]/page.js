@@ -106,17 +106,6 @@ export default async function CaseStudyPage({ params }) {
           </section>
         )}
 
-        {project.whatNext && (
-          <section className="case-study-section">
-            <h2 className="case-study-section-title">What I&rsquo;d Build Next</h2>
-            {project.whatNext === 'TODO' ? (
-              <p className="case-study-todo">TODO — not written yet.</p>
-            ) : (
-              <p>{project.whatNext}</p>
-            )}
-          </section>
-        )}
-
         {(project.links?.github || project.links?.demo) && (
           <div className="case-study-actions">
             {project.links?.github && (

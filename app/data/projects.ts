@@ -45,12 +45,6 @@ export interface Project {
   /** 3-4 stat cards for the case-study page. */
   stats?: ProjectStat[];
   whatIBuilt?: string[];
-  /**
-   * "What I'd build next." No roadmap facts were supplied for either
-   * case-study project yet, so this is left as an explicit TODO string
-   * rather than invented — update this once there's real content.
-   */
-  whatNext?: string;
   architectureImage?: string;
   links?: CaseStudyLinks;
 }
@@ -90,7 +84,6 @@ export const PROJECTS: Project[] = [
       'Real-time progress streaming to the UI via Server-Sent Events (SSE)',
       'An eval harness, backed by 300+ backend tests, that caught 3 real defects unit tests had missed',
     ],
-    whatNext: 'TODO',
     architectureImage: '/projects/design-drift/architecture.svg',
     links: {
       github: 'https://github.com/gauri2029/design-drift',
@@ -128,7 +121,6 @@ export const PROJECTS: Project[] = [
       'Cited answers, with graceful handling when context is insufficient rather than a fabricated response',
       'Micrometer metrics surfaced as P50/P95/P99 dashboards in Grafana',
     ],
-    whatNext: 'TODO',
     architectureImage: '/projects/docuquery/architecture.svg',
     links: {
       github: 'https://github.com/gauri2029/docuquery',

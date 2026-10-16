@@ -44,12 +44,14 @@ export function DemoVideo({ src, previewImage, name }) {
 
   if (videoFailed) {
     if (!previewImage) return null;
+    // No forced 16:9 crop here — a screenshot's real proportions should
+    // stay fully visible, not get cropped to fit a video-shaped box.
     return (
-      <div className="case-study-media">
+      <div className="case-study-media case-study-media-image">
         <ImgWithFallback
           src={previewImage}
           alt={`${name} preview`}
-          className="case-study-video"
+          className="case-study-preview-img"
         />
       </div>
     );
