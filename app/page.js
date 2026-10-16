@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
+import { PROJECTS } from './data/projects';
 
 
 
@@ -399,83 +401,12 @@ const EXPERIENCE = [
     company: 'Cyberinfrastructure for Network Science Center (CNS)',
     location: 'Bloomington, IN',
     period: 'Jan 2025 - Jan 2026',
-    stack: ['Angular', 'TypeScript', 'RxJS', 'AWS S3', 'Jest', 'GitHub Actions'],
-    bullets: [
-      '<strong>Developed and enhanced</strong> Angular + TypeScript frontend on the NIH-funded Human Reference Atlas platform, integrating AWS S3 and building shared design system components and reusable libraries — ensuring WCAG accessibility and scalability, reducing frontend development overhead ~20%.',
-      '<strong>Designed and implemented</strong> new user-facing interfaces in Angular and TypeScript, optimizing RxJS-driven data flows across critical user journeys and reducing redundant API requests ~20%.',
-      '<strong>Owned production stability</strong> through monitoring, debugging, and resolving live issues — ensuring reliable releases with zero critical user-facing disruptions.',
-      '<strong>Maintained CI/CD pipelines</strong> via GitHub Actions and leveraged AI-assisted developer tools to accelerate iteration and delivery, reducing build and release friction ~25%.',
-    ],
   },
   {
     role: 'Software Engineer',
     company: 'Tietoevry India Pvt. Ltd.',
     location: 'Pune, India',
     period: 'Jul 2022 - Jun 2024',
-    stack: ['React', 'C#', '.NET', 'Node.js', 'Docker', 'Azure', 'Storybook', 'Selenium'],
-    bullets: [
-      '<strong>Extended and migrated</strong> healthcare frontend modules from Angular to React, building reusable component libraries in Storybook aligned with Figma designs, cutting frontend development effort ~35%.',
-      '<strong>Developed and maintained</strong> full-stack features using Node.js and C#/.NET REST APIs with SQL Server, enforcing input validation, secure auth flows, and API access controls in a regulated healthcare environment.',
-      '<strong>Maintained ~80%+ code coverage</strong> across unit, integration, and E2E layers using Jest, React Testing Library, Selenium, NUnit, and xUnit.',
-      '<strong>Built CI/CD pipelines</strong> with Azure DevOps and Docker, automating deployments and reducing production incidents ~35% within an agile delivery workflow.',
-    ],
-  },
-];
-
-const PROJECTS = [
-  {
-    num: '01',
-    name: 'DocuQuery',
-    link: 'https://github.com/gauri2029/docuquery',
-    image: './rag-photo.png',
-    accent: 'cobalt',
-    tagline: 'AI-powered documentation assistant for developers',
-    desc: 'Think ChatGPT for your documents, but built for trust: document-scoped retrieval, source-cited answers, evidence tracing, and built-in observability so you can see how the system performs..',
-    metrics: [
-      { val: 'P95', label: 'sub-second latency' },
-      { val: '5', label: 'orchestrated services' },
-    ],
-    stack: ['Spring Boot', 'OpenAI', 'ChromaDB', 'PostgreSQL', 'Docker', 'Prometheus', 'Grafana'],
-    problem: 'Developers waste time digging through internal docs. Most AI tools send data to third-party servers — not viable for private or sensitive documentation.',
-    approach: 'Self-hosted RAG pipeline: documents are chunked with overlapping windows, embedded via OpenAI text-embedding-3-small, and stored in ChromaDB. Queries run semantic search over stored chunks and pass the top results to GPT-4o-mini with strict prompt constraints to prevent hallucination and enforce source citations.',
-    impact: 'P95 query latency under 1 second. Full observability with custom Micrometer metrics — P50/P95/P99 latency, error rates, and throughput tracked via Prometheus and Grafana dashboards.',
-    period: 'Dec 2025 - Jan 2026',
-  },
-  {
-    num: '02',
-    name: 'Degree Flowchart',
-    link: 'https://github.com/degree-flowchart',
-    image: './degree-flowchart.jpg',
-    accent: 'coral',
-    tagline: 'Cloud-native degree planning with Angular and Spring Boot microservices',
-    desc: 'A cloud-native, distributed degree planner that helps students turn messy course requirements into a clear path to graduation, built with Angular and Spring Boot and load-tested with k6 for real-world scale.',
-    metrics: [
-      { val: '245ms', label: 'median response (k6)' },
-      { val: '100k+', label: 'requests load tested' },
-    ],
-    stack: ['Angular', 'TypeScript', 'Spring Boot', 'PostgreSQL', 'Docker', 'Kubernetes', 'Keycloak', 'k6', 'Prometheus'],
-    problem: 'Students had no structured system to visualize and plan their degree path — relying on spreadsheets, manual tracking, and advisor emails to figure out what to take next.',
-    approach: 'Built the Angular + TypeScript frontend with a dynamic course planning UI and OAuth-based authentication via Keycloak, connecting distributed Spring Boot microservices with independent PostgreSQL databases through an API gateway. Services containerized with Docker and configured with Kubernetes manifests for AWS deployment.',
-    impact: 'k6 load tests sustained 1,000 concurrent users and 100,000+ requests at 245ms median response time with 95%+ success rate.',
-    period: 'Sept 2025 - Dec 2025',
-  },
-  {
-    num: '03',
-    name: 'IUCAT Library System',
-    link: 'https://iucat-library.onrender.com',
-    image: './iucat.jpg',
-    accent: 'amber',
-    tagline: 'Fully deployed library system - live on AWS ECS and Render',
-    desc: 'A cloud-deployed library platform built with JavaScript and Spring Boot that makes finding, borrowing, and managing books fast and seamless, with automated workflows, production monitoring, and k6-tested performance at 75 ms average latency.',
-    metrics: [
-      { val: '75ms', label: 'avg response (k6)' },
-      { val: '100%', label: 'success rate under load' },
-    ],
-    stack: ['Spring Boot', 'AWS ECS Fargate', 'Docker', 'GitHub Actions', 'Prometheus'],
-    problem: 'Most student library system projects stop at a basic CRUD API. This one needed to actually work - with real borrowing workflows, queue management, and a deployable setup anyone could use.',
-    approach: 'Spring Boot backend with role-based access control, session-based authentication, and transactional borrowing workflows including 14-day rentals, 2x extensions, and an auto-managed holds queue. Deployed to AWS ECS Fargate behind an ALB and Render via a single GitHub Actions pipeline. Structured JSON logging with MDC correlation IDs and Prometheus metrics for observability.',
-    impact: 'Live on two platforms. k6 load tests: 100% success rate, 75ms avg and 109ms P95 response across 660 requests. CI/CD pipeline fully automated - push to main deploys everywhere.',
-    period: 'Aug 2025 - Oct 2025',
   },
 ];
 
@@ -493,13 +424,6 @@ const PINNED_REPOS = [
     link: 'https://github.com/gauri2029/F1-Data-Analysis-Dashboard',
     desc: 'A Formula 1 analytics dashboard built with Python, Flask, and Plotly that turns race telemetry into interactive insights on pace, strategy, qualifying, and performance.',
     stack: ['Python', 'Flask', 'Plotly'],
-  },
-  {
-    name: 'gauri2029.github.io',
-    org: 'gauri2029/gauri2029.github.io',
-    link: 'https://github.com/gauri2029/gauri2029.github.io',
-    desc: 'A modern Next.js + React portfolio built to showcase my work with polished interactions, responsive design, and a playful Pro/Chaos experience.',
-    stack: ['Next.js', 'React', 'Tailwind CSS'],
   },
 ];
 
@@ -578,7 +502,7 @@ const BOOT_LINES = [
   { text: '[MOD] wcag-a11y.ko', cls: 'purple' },
   { text: '[MOD] rag-pipeline.ko', cls: 'purple' },
   { text: '', cls: '' },
-  { text: '[OK] experience=2+yrs focus=frontend scope=full-stack+cloud', cls: 'green' },
+  { text: '[OK] experience=3yrs scope=full-stack+cloud', cls: 'green' },
   { text: '', cls: '' },
   { text: '$ exec portfolio --mode=impress', cls: 'bright' },
 ];
@@ -698,8 +622,8 @@ function Hero() {
             </h1>
 
             <p className="hero-tagline">
-              <strong>Frontend-focused Software Engineer</strong> with{" "}
-              <strong>2+ years of experience</strong> building polished user
+              <strong>Software Engineer</strong> with{" "}
+              <strong>3 years of experience</strong> building polished user
               interfaces, scalable full-stack applications, and reliable
               cloud-native systems.
             </p>
@@ -755,41 +679,15 @@ function Hero() {
 // ── EXPERIENCE CARD ───────────────────────────────────────────────────────────
 
 function ExperienceCard({ exp }) {
-  const [open, setOpen] = useState(false);
-  const [swept, setSwept] = useState(false);
-  const bodyId = `exp-body-${exp.company.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
-
-  const handleClick = () => {
-    setOpen((o) => !o);
-    setSwept(true);
-    setTimeout(() => setSwept(false), 550);
-  };
-
   return (
-    <div className={`exp-card timeline-card glass-card${open ? ' open' : ''}`}>
-      {swept && <div className="sweep" />}
-      <button type="button" className="exp-header" onClick={handleClick} aria-expanded={open} aria-controls={bodyId}>
+    <div className="exp-card timeline-card glass-card static">
+      <div className="exp-header">
         <div>
           <div className="exp-role">{exp.role}</div>
           <div className="exp-company">{exp.company}</div>
           <div className="exp-meta">
             <span>{exp.period}</span>
             <span>{exp.location}</span>
-          </div>
-        </div>
-        <div className="exp-toggle" aria-hidden="true">+</div>
-      </button>
-      <div className="exp-body-wrap" id={bodyId}>
-        <div className="exp-body-inner">
-          <div className="exp-body">
-            <div className="exp-stack">
-              {exp.stack.map((t) => <span key={t} className="tag accent">{t}</span>)}
-            </div>
-            <ul className="exp-bullets">
-              {exp.bullets.map((b, i) => (
-                <li key={i} dangerouslySetInnerHTML={{ __html: b }} />
-              ))}
-            </ul>
           </div>
         </div>
       </div>
@@ -801,8 +699,33 @@ function ExperienceCard({ exp }) {
 
 function ProjectCard({ proj, reverse }) {
   const [open, setOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const imgRef = useRef(null);
   const tilt = useTilt();
   const bodyId = `project-body-${proj.num}`;
+  const hasCaseStudy = Boolean(proj.caseStudySlug);
+  // Case-study projects link out via `proj.links.github`; everything else
+  // keeps the single legacy `proj.link` field untouched.
+  const externalLink = proj.links?.github || proj.link;
+
+  // `error` doesn't bubble, and this is server-rendered — assigning `src`
+  // directly in JSX risks the browser failing the fetch before React
+  // finishes hydrating and attaches the listener. Attach the listener via
+  // ref first, then assign `src` imperatively, so the fetch can't resolve
+  // before we're already watching for it.
+  useEffect(() => {
+    const el = imgRef.current;
+    if (!el || !proj.image) return undefined;
+    const onError = () => setImgError(true);
+    el.addEventListener('error', onError);
+    el.src = proj.image;
+    return () => el.removeEventListener('error', onError);
+  }, [proj.image]);
+
+  const media = !imgError && (
+    <img ref={imgRef} alt={`${proj.name} preview`} />
+  );
+
   return (
     <div
       className={`project-card-h glass-card tilt-card accent-${proj.accent}${reverse ? ' reverse' : ''}${open ? ' open' : ''}`}
@@ -810,15 +733,23 @@ function ProjectCard({ proj, reverse }) {
       onMouseLeave={tilt.onMouseLeave}
     >
       <div className="project-card-image">
-        <img src={proj.image} alt={`${proj.name} preview`} loading="lazy" />
+        {hasCaseStudy ? (
+          <Link href={`/projects/${proj.caseStudySlug}`} aria-label={`Open ${proj.name} case study`}>
+            {media}
+          </Link>
+        ) : media}
         <div className="project-num">// {proj.num}</div>
       </div>
 
       <div className="project-card-content">
         <div className="project-top-row">
-          <div className="project-name">{proj.name}</div>
-          {proj.link && (
-            <a href={proj.link} target="_blank" rel="noopener noreferrer" className="project-link-icon" title="View project">
+          <div className="project-name">
+            {hasCaseStudy ? (
+              <Link href={`/projects/${proj.caseStudySlug}`}>{proj.name}</Link>
+            ) : proj.name}
+          </div>
+          {externalLink && (
+            <a href={externalLink} target="_blank" rel="noopener noreferrer" className="project-link-icon" title="View on GitHub">
               ↗
             </a>
           )}
@@ -833,28 +764,39 @@ function ProjectCard({ proj, reverse }) {
           ))}
         </div>
 
-        <button type="button" className="project-expand-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={bodyId}>
-          <span>{open ? 'Collapse' : 'See details'}</span>
-          <span aria-hidden="true" style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
-        </button>
+        {hasCaseStudy ? (
+          <Link href={`/projects/${proj.caseStudySlug}`} className="project-expand-btn">
+            <span>Open case study</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+        ) : (
+          <>
+            <button type="button" className="project-expand-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={bodyId}>
+              <span>{open ? 'Collapse' : 'See details'}</span>
+              <span aria-hidden="true" style={{ display: 'inline-block', transition: 'transform 0.25s', transform: open ? 'rotate(45deg)' : 'none' }}>+</span>
+            </button>
 
-        <div className="project-body-wrap" id={bodyId}>
-          <div className="project-body-inner">
-            <div className="project-body">
-              <div className="project-section-title">Problem</div>
-              <p>{proj.problem}</p>
-              <div className="project-section-title">Approach</div>
-              <p>{proj.approach}</p>
-              <div className="project-section-title">Impact</div>
-              <p>{proj.impact}</p>
-              <div className="project-section-title" style={{ marginTop: 16 }}>Stack</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
-                {proj.stack.map((t) => <span key={t} className="tag cyan">{t}</span>)}
+            <div className="project-body-wrap" id={bodyId}>
+              <div className="project-body-inner">
+                <div className="project-body">
+                  <div className="project-section-title">Problem</div>
+                  <p>{proj.problem}</p>
+                  <div className="project-section-title">Approach</div>
+                  <p>{proj.approach}</p>
+                  <div className="project-section-title">Impact</div>
+                  <p>{proj.impact}</p>
+                  <div className="project-section-title" style={{ marginTop: 16 }}>Stack</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
+                    {proj.stack.map((t) => <span key={t} className="tag cyan">{t}</span>)}
+                  </div>
+                  {proj.period && (
+                    <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{proj.period}</div>
+                  )}
+                </div>
               </div>
-              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{proj.period}</div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
