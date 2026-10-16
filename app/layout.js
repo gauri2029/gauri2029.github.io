@@ -1,8 +1,9 @@
 import './globals.css';
 
 export const metadata = {
+  metadataBase: new URL('https://www.gaurimarkandey.com'),
   title: 'Gauri Markandey',
-  description: 'Frontend-focused Software Engineer with full-stack and cloud experience.',
+  description: 'Software Engineer with full-stack and cloud experience.',
   icons: { icon: '/favicon.svg' },
 };
 
@@ -17,6 +18,16 @@ export default function RootLayout({ children }) {
         <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme', t==='dark'?'dark':'light');}catch(e){}`,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            // Pro/Chaos mode is normally set by the homepage's useWorldMode
+            // hook, which doesn't run on other routes (e.g. case-study
+            // pages) — set it here too so every route renders with the
+            // right [data-mode] styling from first paint, not just the
+            // homepage.
+            __html: `try{var m=localStorage.getItem('site-mode');document.documentElement.setAttribute('data-mode', m==='professional'?'professional':'chaos');}catch(e){}`,
           }}
         />
       </head>
